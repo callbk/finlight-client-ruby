@@ -1,20 +1,32 @@
 name: Release
 
-# Publishes the tagged version to RubyGems.
-# Repository secret (publish is skipped gracefully while it is missing):
-#   RUBYGEMS_API_KEY - API key from rubygems.org with push scope
+# Publishes the tagged version to RubyGems via OIDC trusted publishing —
+# no API key or secret involved. One-time setup on rubygems.org
+# (Dashboard -> Trusted publishers -> pending publisher for a new gem):
+#   gem name:          finlight-client
+#   repository owner:  callbk
+#   repository name:   finlight-client-ruby
+#   workflow filename: release.yml
+#   environment:       ruby
 
 on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+    environment: ruby
+    permissions:
+      contents: write # release-gem runs `rake release`, which pushes the version tag
+      id-token: write # required for OIDC trusted publishing
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
@@ -29,11 +41,5 @@ jobs:
           fi
       - name: Test
         run: bundle exec rake
-      - name: Build gem
-        run: gem build finlight-client.gemspec
-      - name: Publish to RubyGems
-        if: env.GEM_HOST_API_KEY != ''
-        run: gem push finlight-client-*.gem
-      - name: Publish skipped
-        if: env.GEM_HOST_API_KEY == ''
-        run: echo "RUBYGEMS_API_KEY not configured - skipping RubyGems publish"
+      - name: Publish to RubyGems (trusted publishing)
+        uses: rubygems/release-gem@v1
