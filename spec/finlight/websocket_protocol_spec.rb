@@ -166,6 +166,38 @@ RSpec.describe "WebSocket protocol" do
     expect(@server.errors).to eq([])
   end
 
+  it "proactively rotates the connection before the server lifetime cap" do
+    # The real client rotates after 115 minutes (2h AWS cap minus margin);
+    # replayed here with a tiny connection_lifetime.
+    close_events = []
+    @server = WsTestServer.new(
+      on_message: lambda { |conn, message|
+        next unless handshake?(message)
+
+        if conn.index == 1
+          conn.send_text(WsTestServer.article_message("https://example.com/before-rotation"))
+          # Then stay silent: the client must initiate the rotation itself.
+        else
+          conn.send_text(WsTestServer.article_message("https://example.com/after-rotation"))
+          conn.send_text(JSON.generate(action: "preempted", reason: "test over"))
+        end
+      },
+      on_close: ->(conn, code, reason) { close_events << [conn.index, code, reason] }
+    )
+
+    client = Finlight::ArticleWebSocketClient.new(
+      config_for(@server), connection_lifetime: 0.3, **fast_options
+    )
+    received = []
+    join!(client.connect_async { |article| received << article })
+
+    expect(received.map(&:link)).to eq(
+      ["https://example.com/before-rotation", "https://example.com/after-rotation"]
+    )
+    expect(close_events).to include([1, 4000, "Proactive rotation"])
+    expect(@server.errors).to eq([])
+  end
+
   it "ends the stream on stop" do
     @server = WsTestServer.new(
       on_message: lambda { |conn, message|

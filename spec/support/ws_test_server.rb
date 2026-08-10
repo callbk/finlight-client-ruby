@@ -47,9 +47,11 @@ class WsTestServer
 
   # @param on_open [Proc] called with (conn) once the WebSocket handshake completed
   # @param on_message [Proc] called with (conn, message) for every text message
-  def initialize(on_open: nil, on_message: nil)
+  # @param on_close [Proc] called with (conn, code, reason) when a connection closes
+  def initialize(on_open: nil, on_message: nil, on_close: nil)
     @on_open = on_open
     @on_message = on_message
+    @on_close = on_close
     @resource_paths = []
     @errors = []
     @connections = 0
@@ -119,7 +121,10 @@ class WsTestServer
     end
     driver.on(:open) { safely { @on_open&.call(conn) } }
     driver.on(:message) { |event| safely { @on_message&.call(conn, event.data) } }
-    driver.on(:close) { done = true }
+    driver.on(:close) do |event|
+      done = true
+      safely { @on_close&.call(conn, event.code, event.reason) }
+    end
     driver.on(:error) { done = true }
 
     driver.parse(io.readpartial(16_384)) until done
