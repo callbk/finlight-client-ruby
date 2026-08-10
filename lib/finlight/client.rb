@@ -25,9 +25,10 @@ module Finlight
   class Client
     attr_reader :config, :articles, :sources
 
+    # Remaining keywords (+base_url:+, +wss_url:+, +timeout:+ in seconds,
+    # +retry_count:+) are forwarded to {Config}.
+    #
     # @param api_key [String] your finlight API key
-    # @param options [Hash] optional +base_url:+, +wss_url:+, +timeout:+
-    #   (seconds), +retry_count:+ — see {Config}
     def initialize(api_key:, logger: Logging.default, **)
       @config = Config.new(api_key: api_key, **)
       @logger = logger

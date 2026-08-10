@@ -9,4 +9,5 @@ group :development do
   gem "rspec", "~> 3.13"
   gem "rubocop", "~> 1.81"
   gem "webrick", "~> 1.9"
+  gem "yard", "~> 0.9"
 end
