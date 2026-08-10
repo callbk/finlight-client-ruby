@@ -1,5 +1,8 @@
 # finlight-client (Ruby)
 
+[![Gem Version](https://img.shields.io/gem/v/finlight-client)](https://rubygems.org/gems/finlight-client)
+[![CI](https://github.com/callbk/finlight-client-ruby/actions/workflows/test.yml/badge.svg)](https://github.com/callbk/finlight-client-ruby/actions/workflows/test.yml)
+
 The official Ruby client for the [finlight.me](https://finlight.me) API — financial news with sentiment analysis, entity recognition, and real-time streaming.
 
 📚 **Full API documentation: [docs.finlight.me](https://docs.finlight.me)**
