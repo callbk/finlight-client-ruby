@@ -9,7 +9,7 @@ module Finlight
 
     # @return [Array<Source>] all available news sources
     # @raise [ApiError] if the API request fails
-    def get_sources
+    def get_sources # rubocop:disable Naming/AccessorMethodName -- mirrors the sibling clients' API
       @api_client.get("/v2/sources").map { |s| Source.from_h(s) }
     end
   end

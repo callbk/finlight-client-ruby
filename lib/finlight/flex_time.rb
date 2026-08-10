@@ -19,7 +19,7 @@ module Finlight
       s = value.to_s.strip
       iso_like = s.include?(" ") ? s.sub(" ", "T") : s
       DateTime.iso8601(iso_like).to_time.utc
-    rescue Date::Error, ArgumentError
+    rescue ArgumentError, TypeError
       raise Error, "finlight: cannot parse timestamp: #{value.inspect}"
     end
   end

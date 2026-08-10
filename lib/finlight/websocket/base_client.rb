@@ -225,8 +225,8 @@ module Finlight
       reader = Thread.new do
         Thread.current.report_on_exception = false
         begin
-          queue << io.readpartial(16_384) while true
-        rescue StandardError, EOFError
+          loop { queue << io.readpartial(16_384) }
+        rescue StandardError
           queue << :eof
         end
       end
@@ -288,7 +288,7 @@ module Finlight
         JSON.parse(data)
       rescue JSON::ParserError => e
         @logger.error { "finlight: cannot parse message: #{e.message}" }
-        return
+        nil
       end
       return unless msg.is_a?(Hash)
 
@@ -342,8 +342,9 @@ module Finlight
         parse_article(data)
       rescue StandardError => e
         @logger.error { "finlight: cannot parse article: #{e.message}" }
-        return
+        nil
       end
+      return if article.nil?
 
       id = article_id(article)
       if id

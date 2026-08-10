@@ -37,9 +37,7 @@ module Finlight
 
       message = timestamp ? "#{timestamp}.#{raw_body}" : raw_body
       expected = compute_signature(message, endpoint_secret)
-      unless secure_compare(normalized, expected)
-        raise WebhookVerificationError, "Invalid webhook signature"
-      end
+      raise WebhookVerificationError, "Invalid webhook signature" unless secure_compare(normalized, expected)
 
       verify_timestamp(timestamp) if timestamp
 
@@ -57,9 +55,9 @@ module Finlight
         raise WebhookVerificationError, "Invalid timestamp format"
       end
 
-      if (Time.now.utc - webhook_time).abs > REPLAY_TOLERANCE_SECONDS
-        raise WebhookVerificationError, "Webhook timestamp outside allowed tolerance"
-      end
+      return unless (Time.now.utc - webhook_time).abs > REPLAY_TOLERANCE_SECONDS
+
+      raise WebhookVerificationError, "Webhook timestamp outside allowed tolerance"
     end
 
     def parse_payload(raw_body)
@@ -76,10 +74,10 @@ module Finlight
       end
     end
 
-    def secure_compare(a, b)
-      return false unless a.bytesize == b.bytesize
+    def secure_compare(left, right)
+      return false unless left.bytesize == right.bytesize
 
-      OpenSSL.fixed_length_secure_compare(a, b)
+      OpenSSL.fixed_length_secure_compare(left, right)
     end
   end
 end

@@ -5,7 +5,7 @@
 #
 #   FINLIGHT_API_KEY=sk_... bundle exec rspec spec/integration
 RSpec.describe "integration smoke", :integration do
-  api_key = ENV["FINLIGHT_API_KEY"]
+  api_key = ENV.fetch("FINLIGHT_API_KEY", nil)
 
   before do
     skip "FINLIGHT_API_KEY not set" if api_key.nil? || api_key.empty?

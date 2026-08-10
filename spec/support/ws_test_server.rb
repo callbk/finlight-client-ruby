@@ -64,7 +64,7 @@ class WsTestServer
         @mutex.synchronize { @sockets << io }
         Thread.new { handle(io) }
       end
-    rescue StandardError, IOError
+    rescue StandardError
       nil
     end
   end
@@ -91,7 +91,13 @@ class WsTestServer
       nil
     end
     @accept_thread.join(2)
-    @mutex.synchronize { @sockets.each { |s| s.close rescue nil } }
+    @mutex.synchronize do
+      @sockets.each do |s|
+        s.close
+      rescue StandardError
+        nil
+      end
+    end
   end
 
   private
@@ -117,10 +123,14 @@ class WsTestServer
     driver.on(:error) { done = true }
 
     driver.parse(io.readpartial(16_384)) until done
-  rescue EOFError, IOError, SystemCallError
+  rescue IOError, SystemCallError
     nil
   ensure
-    io.close rescue nil
+    begin
+      io.close
+    rescue StandardError
+      nil
+    end
   end
 
   def safely

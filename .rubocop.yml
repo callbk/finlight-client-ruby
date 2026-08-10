@@ -1,0 +1,35 @@
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "vendor/**/*"
+    - "local/**/*"
+    - "*.gemspec"
+
+# The WebSocket protocol implementation is inherently long; splitting it
+# further would hurt readability, mirroring the sibling clients.
+Metrics:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 110
+
+Style/Documentation:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# Intentionally empty article callbacks in protocol tests.
+Lint/EmptyBlock:
+  Exclude:
+    - "spec/**/*"
+
+# Entry shim so both `require "finlight-client"` and `require "finlight/client"` work.
+Naming/FileName:
+  Exclude:
+    - "lib/finlight-client.rb"

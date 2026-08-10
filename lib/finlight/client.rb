@@ -28,8 +28,8 @@ module Finlight
     # @param api_key [String] your finlight API key
     # @param options [Hash] optional +base_url:+, +wss_url:+, +timeout:+
     #   (seconds), +retry_count:+ — see {Config}
-    def initialize(api_key:, logger: Logging.default, **options)
-      @config = Config.new(api_key: api_key, **options)
+    def initialize(api_key:, logger: Logging.default, **)
+      @config = Config.new(api_key: api_key, **)
       @logger = logger
       api_client = ApiClient.new(@config, logger: logger)
       @articles = ArticleService.new(api_client)
@@ -40,15 +40,15 @@ module Finlight
     # {BaseWebSocketClient#connect} for options and usage.
     #
     # @return [ArticleWebSocketClient]
-    def websocket(**options)
-      ArticleWebSocketClient.new(@config, logger: @logger, **options)
+    def websocket(**)
+      ArticleWebSocketClient.new(@config, logger: @logger, **)
     end
 
     # A streaming client for raw articles (minimal latency, no enrichment).
     #
     # @return [RawArticleWebSocketClient]
-    def raw_websocket(**options)
-      RawArticleWebSocketClient.new(@config, logger: @logger, **options)
+    def raw_websocket(**)
+      RawArticleWebSocketClient.new(@config, logger: @logger, **)
     end
   end
 end

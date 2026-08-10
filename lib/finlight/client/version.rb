@@ -5,6 +5,6 @@ module Finlight
     VERSION = "0.1.0"
 
     # Identifier sent as User-Agent (REST) and x-client-version (WebSocket).
-    CLIENT_VERSION = "ruby/finlight-client@#{VERSION}"
+    CLIENT_VERSION = "ruby/finlight-client@#{VERSION}".freeze
   end
 end

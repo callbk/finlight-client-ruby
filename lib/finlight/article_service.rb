@@ -42,7 +42,7 @@ module Finlight
     # @raise [ApiError] if the API request fails or the article is not found
     def fetch_article_by_link(link:, **params)
       query = Params.normalize(params.merge(link: link))
-      query = query.transform_values { |v| v == true || v == false ? v.to_s : v }
+      query = query.transform_values { |v| [true, false].include?(v) ? v.to_s : v }
       response = @api_client.get("/v2/articles/by-link", query)
       Article.from_h(response.fetch("article"))
     end

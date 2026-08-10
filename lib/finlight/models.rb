@@ -181,8 +181,8 @@ module Finlight
     def self.from_h(hash)
       new(
         domain: hash["domain"],
-        is_content_available: !!hash["isContentAvailable"],
-        is_default_source: !!hash["isDefaultSource"]
+        is_content_available: hash["isContentAvailable"] == true,
+        is_default_source: hash["isDefaultSource"] == true
       )
     end
   end
