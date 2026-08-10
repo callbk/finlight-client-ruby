@@ -1,0 +1,39 @@
+name: Release
+
+# Publishes the tagged version to RubyGems.
+# Repository secret (publish is skipped gracefully while it is missing):
+#   RUBYGEMS_API_KEY - API key from rubygems.org with push scope
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Check tag matches gem version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          GEM_VERSION="$(ruby -r ./lib/finlight/client/version -e 'puts Finlight::Client::VERSION')"
+          if [ "$VERSION" != "$GEM_VERSION" ]; then
+            echo "tag v${VERSION} does not match Finlight::Client::VERSION ${GEM_VERSION}" >&2
+            exit 1
+          fi
+      - name: Test
+        run: bundle exec rake
+      - name: Build gem
+        run: gem build finlight-client.gemspec
+      - name: Publish to RubyGems
+        if: env.GEM_HOST_API_KEY != ''
+        run: gem push finlight-client-*.gem
+      - name: Publish skipped
+        if: env.GEM_HOST_API_KEY == ''
+        run: echo "RUBYGEMS_API_KEY not configured - skipping RubyGems publish"
