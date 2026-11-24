@@ -102,7 +102,7 @@ sources = client.sources.list
 
 - 未找到时抛出 `Finlight::NotFoundError`，绝不会返回空结果。在引入文章 id 之前收录的文章按 id 查询会返回 404，请按链接查询。
 - `companies.*` 需要 `entityAccess` 权限（否则抛出 `Finlight::ForbiddenError`）。
-- 查询企业和来源与文章请求一样消耗额度：每个成功的请求 1 个 credit（`get_many` 按请求计，不按 ID 计）。304 重新验证和错误不计费。这里也可能返回 429。
+- 查询企业和来源与文章请求一样消耗额度：每个请求 1 个 credit（`get_many` 按请求计，不按 ID 计）。304 重新验证和错误也计 1 个 credit。这里也可能返回 429。
 - `companies.get` 最多缓存 256 条记录（`company_cache_size`），并用 ETag 重新验证。304 时返回缓存的记录。
   使用自己的 ETag 调用 `companies.get(id, if_none_match: etag)` 时，304 返回 `nil`（"未修改"）。
 - `CompanyList` 和 `SourceList` 是 Enumerable。无法读取的条目会被跳过、记录警告，并保存在 `skipped`

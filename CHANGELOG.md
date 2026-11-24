@@ -22,8 +22,8 @@ Contract kit: 3.0.0-rc.5.
   `companies.search`, `companies.get_many`, `companies.get` (with ETag revalidation and `cache_info`) and
   `sources.list`. Parameters are explicit keyword arguments; unknown keys and wrong shapes raise
   `Finlight::ValidationError` before any request. Only the keys you pass are sent.
-- Company and source lookups cost 1 credit per successful request (`get_many` 1 per request, not per id),
-  like article requests. A 304 revalidation and errors are free. A 429 is possible on lookups too.
+- Company and source lookups cost 1 credit per request (`get_many` 1 per request, not per id), like
+  article requests. A 304 revalidation and errors cost 1 credit too. A 429 is possible on lookups too.
 - `search_all` freezes the request body and changes only the cursor; it stops after `max_pages` (default 10),
   logs a warning and keeps `next_cursor`. It can be iterated once.
 - Immutable `Data` models (`Article`, `Company`, `CompanyRecord`, `Source`, ...) that ignore unknown keys,

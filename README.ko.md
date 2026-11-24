@@ -102,7 +102,7 @@ sources = client.sources.list
 
 - 찾지 못하면 `Finlight::NotFoundError`가 발생하며, 빈 결과가 되지 않습니다. 기사 ID 도입 전에 수집된 기사는 ID로 조회하면 404이므로 링크로 조회하세요.
 - `companies.*`에는 `entityAccess` 권한이 필요합니다(없으면 `Finlight::ForbiddenError`).
-- 기업·소스 조회도 기사 요청처럼 크레딧을 씁니다. 성공한 요청 1건당 1크레딧입니다(`get_many`는 ID별이 아니라 요청당 1). 304 재검증과 오류는 무료입니다. 여기서도 429가 올 수 있습니다.
+- 기업·소스 조회도 기사 요청처럼 크레딧을 씁니다. 요청 1건당 1크레딧입니다(`get_many`는 ID별이 아니라 요청당 1). 304 재검증과 오류도 1크레딧입니다. 여기서도 429가 올 수 있습니다.
 - `companies.get`은 최대 256건(`company_cache_size`)을 보관하고 ETag로 재검증합니다. 304이면 캐시된 레코드를 반환합니다.
   자신의 ETag로 `companies.get(id, if_none_match: etag)`를 호출하면 304에서 `nil`("변경 없음")을 반환합니다.
 - `CompanyList`와 `SourceList`는 Enumerable입니다. 읽을 수 없는 항목은 제외되고 경고로 기록되며 `skipped`
