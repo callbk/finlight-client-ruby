@@ -4,16 +4,18 @@ AllCops:
   SuggestExtensions: false
   Exclude:
     - "vendor/**/*"
+    - "gemfiles/vendor/**/*"
     - "local/**/*"
+    - "conformance/**/*"
+    - "pkg/**/*"
     - "*.gemspec"
 
-# The WebSocket protocol implementation is inherently long; splitting it
-# further would hurt readability, mirroring the sibling clients.
+# Protocol code (stream supervisor, decoders) reads best as one method per state machine.
 Metrics:
   Enabled: false
 
 Layout/LineLength:
-  Max: 110
+  Max: 120
 
 Style/Documentation:
   Enabled: false
@@ -24,12 +26,41 @@ Style/StringLiterals:
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
 
-# Intentionally empty article callbacks in protocol tests.
-Lint/EmptyBlock:
-  Exclude:
-    - "spec/**/*"
-
-# Entry shim so both `require "finlight-client"` and `require "finlight/client"` work.
+# Entry shim so both `require "finlight-client"` and `require "finlight"` work.
 Naming/FileName:
   Exclude:
     - "lib/finlight-client.rb"
+
+# Predicates follow the public name table: content_present?, test?, truncated?, closed?.
+Naming/PredicateMethod:
+  Enabled: false
+
+# The session engine names its methods after the kit's step and outcome names (camelCase).
+Naming/MethodName:
+  Exclude:
+    - "spec/support/session_engine.rb"
+
+# Hidden keyword arguments (__raw:) carry the raw JSON into immutable models.
+Lint/UnderscorePrefixedVariableName:
+  Enabled: false
+
+Style/GlobalStdStream:
+  Exclude:
+    - "spec/**/*"
+
+# `q` and `id` are the wire names of these parameters.
+Naming/MethodParameterName:
+  AllowedNames: [q, id, io, to, ok]
+
+Style/FormatStringToken:
+  Enabled: false
+
+# Tests leave a stream loop with `break` on purpose.
+Lint/UnreachableLoop:
+  Exclude:
+    - "spec/**/*"
+    - "examples/**/*"
+
+Lint/StructNewOverride:
+  Exclude:
+    - "spec/support/mock_http.rb"

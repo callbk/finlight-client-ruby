@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
-require_relative "lib/finlight/client/version"
+require_relative "lib/finlight/version"
 
 Gem::Specification.new do |spec|
   spec.name = "finlight-client"
-  spec.version = Finlight::Client::VERSION
+  spec.version = Finlight::VERSION
   spec.authors = ["finlight.me"]
   spec.email = ["info@finlight.me"]
 
-  spec.summary = "Official Ruby client for the finlight.me API"
+  spec.summary = "Official Ruby client for the finlight.me API v3"
   spec.description =
-    "Financial news with sentiment analysis, entity recognition and real-time streaming: " \
-    "REST, WebSocket and webhook verification client for finlight.me."
+    "Breaking release: 1.0 speaks only the finlight API v3 (pin ~> 0.1 to stay on API v2). " \
+    "Financial news search, company and source lookups over REST, real-time WebSocket streams " \
+    "and webhook verification for finlight.me."
   spec.homepage = "https://finlight.me"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
@@ -23,9 +24,10 @@ Gem::Specification.new do |spec|
   spec.metadata["bug_tracker_uri"] = "https://github.com/callbk/finlight-client-ruby/issues"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE"]
+  # Only the library and its docs: never conformance/, local/, spec/, examples/ or scripts/.
+  spec.files = Dir["lib/**/*.rb", "README.md", "CHANGELOG.md", "LICENSE"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "logger", "~> 1.6"
-  spec.add_dependency "websocket-driver", "~> 0.8"
+  spec.add_dependency "logger", ">= 1.5"
+  spec.add_dependency "websocket-driver", ">= 0.7.7", "< 1.0"
 end
