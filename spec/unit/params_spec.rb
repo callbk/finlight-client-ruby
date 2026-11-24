@@ -66,6 +66,25 @@ RSpec.describe "request parameters" do
     expect(JSON.parse(mock_http.requests[0].body)).to eq(expected)
   end
 
+  it "search_all sends every search parameter like search, source type filters included" do
+    fx = Kit.load("fixtures/requests/search-all-parameters.json")
+    args = Kit.snake_args(fx["sdk"]["args"])
+    mock_http.respond({ status: 200, body: { "articles" => [], "pagination" => { "limit" => 1, "returned" => 0,
+                                                                                 "hasMore" => false,
+                                                                                 "nextCursor" => nil } } })
+    client.articles.search_all(**args).to_a
+    body = JSON.parse(mock_http.requests[0].body)
+    expect(body).to eq(fx["request"]["body"])
+    expect(body.slice("sourceTypes", "excludeSourceTypes"))
+      .to eq("sourceTypes" => %w[newswire financial_media], "excludeSourceTypes" => ["press_release"])
+  end
+
+  it "checks the shape of the source type filters before any request" do
+    expect_local_rejection("source_types") { client.articles.search(source_types: "newswire") }
+    expect_local_rejection("exclude_source_types") { client.articles.search(exclude_source_types: [1]) }
+    expect_local_rejection("source_types") { client.articles.search_all(source_types: "newswire") }
+  end
+
   it "sends false and 0 when set, and nothing for nil" do
     mock_http.respond({ status: 200, body: { "articles" => [], "pagination" => {} } })
     client.articles.search(has_content: false, min_relevance: 0, query: nil)
