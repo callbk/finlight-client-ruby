@@ -118,7 +118,9 @@ RSpec.describe "configuration (R-CONFIG-1)" do
     expect(config.burst_wait).to eq(10.0)
     expect(config.max_pages).to eq(10)
     expect(config.max_response_bytes).to eq(32 * 1024 * 1024)
-    expect(config.company_cache_size).to eq(256)
+    expect(config).not_to respond_to(:company_cache_size)
+    expect { Finlight::Config.new(api_key: "k", company_cache_size: 256) }
+      .to raise_error(Finlight::ValidationError, /unknown config key: company_cache_size/)
     expect(config.search_failed_threshold).to eq(5)
     expect(Finlight::Client.new(config: config).config).to equal(config)
     expect(config.with(wss_url: "ws://x/").ws_url(true)).to eq("ws://x/raw")

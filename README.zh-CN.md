@@ -94,17 +94,20 @@ article = client.articles.get_by_link("https://www.reuters.com/...")
 
 companies = client.companies.search("NVDA", mic: "XNAS") # at most 10, no pages
 companies = client.companies.get_many([4821, 1001])
-company = client.companies.get(4821)                     # revalidated with its ETag next time
-puts company.cache_info.etag
+company = client.companies.get(4821)
+etag = company.cache_info.etag                           # keep it with the record if you cache it
+company = client.companies.get(4821, if_none_match: etag) # nil on 304 ("not modified")
 
 sources = client.sources.list
 ```
 
 - 未找到时抛出 `Finlight::NotFoundError`，绝不会返回空结果。在引入文章 id 之前收录的文章按 id 查询会返回 404，请按链接查询。
 - `companies.*` 需要 `entityAccess` 权限（否则抛出 `Finlight::ForbiddenError`）。
-- 查询企业和来源与文章请求一样消耗额度：每个请求 1 个 credit（`get_many` 按请求计，不按 ID 计）。304 重新验证和错误也计 1 个 credit。这里也可能返回 429。
-- `companies.get` 最多缓存 256 条记录（`company_cache_size`），并用 ETag 重新验证。304 时返回缓存的记录。
-  使用自己的 ETag 调用 `companies.get(id, if_none_match: etag)` 时，304 返回 `nil`（"未修改"）。
+- 查询企业和来源与文章请求一样消耗额度：每个请求 1 个 credit（`get_many` 按请求计，不按 ID 计）。304 和错误也计 1 个 credit。这里也可能返回 429。
+- SDK 不缓存企业记录。每次 `companies.get` 都会发出请求。`company.cache_info` 包含响应的 `etag` 和 `cache_control`。
+  想节省 credit，请自己保存记录，并在 `max-age` 内不再调用。也可以把 ETag 传回：
+  `companies.get(id, if_none_match: etag)` 会发送 `If-None-Match`，304 时返回 `nil`（"未修改"）。304 也计 1 个 credit，节省的是下载，不是 credit。
+  不传 `if_none_match` 时不发送 `If-None-Match`。主要的企业字段已包含在文章数据中。
 - `CompanyList` 和 `SourceList` 是 Enumerable。无法读取的条目会被跳过、记录警告，并保存在 `skipped`
   中（索引、原始 JSON、原因）。`search` 的结果页同样有 `skipped`。
 
@@ -264,7 +267,6 @@ client = Finlight::Client.new(
 | `burst_wait` | 10 秒，仅在没有 `Retry-After` 时 |
 | `max_pages` | 10 |
 | `max_response_bytes` | 32 MiB |
-| `company_cache_size` | 256（0 = 关闭） |
 | `ping_interval`、`watchdog_timeout`、`rotation_interval` | 25 秒、60 秒、115 分钟 |
 | `reconnect_base_delay`、`reconnect_max_delay` | 1 秒、30 秒 |
 | `long_backoff` | 60 秒 |

@@ -89,12 +89,13 @@ RSpec.describe "Conformance R: requests" do
         expect(result.cache_info.etag).to eq(fx["response"]["headers"]["etag"])
         expect(result.cache_info.cache_control).to eq(fx["response"]["headers"]["cache-control"])
         expect(result.cache_info.not_modified).to be(false)
+        expect(request.header("If-None-Match")).to be_nil # no caller ifNoneMatch: no conditional request
         mics = result.listings.map(&:mic)
         expect(mics.uniq).to eq(mics)
         expect(result.listings[0].mic).to eq(result.primary_listing.mic)
         expect(result.listings.map(&:active)).to all(satisfy { |v| [true, false].include?(v) })
       when "R-09"
-        expect(result).to be_nil # a caller-managed ETag: "not modified"
+        expect(result).to be_nil # the caller's ETag: "not modified"
       when "R-10"
         expect(result).to be_a(Finlight::SourceList)
         expect(result.map(&:has_content)).to all(satisfy { |v| [true, false].include?(v) })
@@ -118,7 +119,18 @@ RSpec.describe "Conformance R: requests" do
     expect(JSON.parse(mock_http.requests[0].body)).to eq(fx["request"]["body"])
   end
 
-  it "R-09 the SDK's own cached copy is returned on 304", kit_case: "R-09" do
+  it "R-08 the SDK keeps no company cache: a second get sends no If-None-Match", kit_case: "R-08" do
+    ok = Kit.load("fixtures/requests/companies-get.json")
+    client = rest_client
+    serve(ok)
+    client.companies.get(900_001)
+    second = client.companies.get(900_001)
+    expect(mock_http.requests.size).to eq(2)
+    expect(mock_http.requests.map { |r| r.header("If-None-Match") }).to eq([nil, nil])
+    expect(second.cache_info.etag).to eq(ok["response"]["headers"]["etag"])
+  end
+
+  it "R-09 a 304 with the caller's ETag returns nil, never a stored record", kit_case: "R-09" do
     ok = Kit.load("fixtures/requests/companies-get.json")
     not_modified = Kit.load("fixtures/requests/companies-get-not-modified.json")
     client = rest_client
@@ -126,9 +138,7 @@ RSpec.describe "Conformance R: requests" do
     first = client.companies.get(900_001)
     mock_http.reset
     serve(not_modified)
-    second = client.companies.get(900_001)
-    expect(mock_http.requests[0].header("If-None-Match")).to eq(ok["response"]["headers"]["etag"])
-    expect(second).to eq(first)
-    expect(second.cache_info.not_modified).to be(true)
+    expect(client.companies.get(900_001, if_none_match: first.cache_info.etag)).to be_nil
+    expect(mock_http.requests[0].header("If-None-Match")).to eq(first.cache_info.etag)
   end
 end

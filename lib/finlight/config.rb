@@ -34,7 +34,6 @@ module Finlight
       burst_wait: 10.0,
       max_pages: 10,
       max_response_bytes: 32 * 1024 * 1024,
-      company_cache_size: 256,
       ping_interval: 25.0,
       watchdog_timeout: 60.0,
       rotation_interval: 115 * 60.0,
@@ -69,7 +68,6 @@ module Finlight
     # @param burst_wait [Numeric] burst wait when the 429 has no Retry-After
     # @param max_pages [Integer] default page cap of search_all
     # @param max_response_bytes [Integer] size cap of a REST response
-    # @param company_cache_size [Integer] records kept for ETag revalidation, 0 = off
     # @param ping_interval [Numeric] stream ping interval
     # @param watchdog_timeout [Numeric] reconnect after this long without a pong
     # @param rotation_interval [Numeric] open a fresh connection after this long
@@ -139,7 +137,7 @@ module Finlight
         positive_number!(key)
       end
       positive_number!(:total_timeout) unless @total_timeout.nil?
-      %i[max_retries company_cache_size].each { |key| integer!(key, 0) }
+      integer!(:max_retries, 0)
       %i[max_pages max_response_bytes search_failed_threshold dedupe_cache_size].each { |key| integer!(key, 1) }
       integer!(:max_message_bytes, 16 * 1024 * 1024)
       unless %w[once off].include?(@retry_on_burst)

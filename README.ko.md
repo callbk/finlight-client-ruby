@@ -94,17 +94,20 @@ article = client.articles.get_by_link("https://www.reuters.com/...")
 
 companies = client.companies.search("NVDA", mic: "XNAS") # at most 10, no pages
 companies = client.companies.get_many([4821, 1001])
-company = client.companies.get(4821)                     # revalidated with its ETag next time
-puts company.cache_info.etag
+company = client.companies.get(4821)
+etag = company.cache_info.etag                           # keep it with the record if you cache it
+company = client.companies.get(4821, if_none_match: etag) # nil on 304 ("not modified")
 
 sources = client.sources.list
 ```
 
 - 찾지 못하면 `Finlight::NotFoundError`가 발생하며, 빈 결과가 되지 않습니다. 기사 ID 도입 전에 수집된 기사는 ID로 조회하면 404이므로 링크로 조회하세요.
 - `companies.*`에는 `entityAccess` 권한이 필요합니다(없으면 `Finlight::ForbiddenError`).
-- 기업·소스 조회도 기사 요청처럼 크레딧을 씁니다. 요청 1건당 1크레딧입니다(`get_many`는 ID별이 아니라 요청당 1). 304 재검증과 오류도 1크레딧입니다. 여기서도 429가 올 수 있습니다.
-- `companies.get`은 최대 256건(`company_cache_size`)을 보관하고 ETag로 재검증합니다. 304이면 캐시된 레코드를 반환합니다.
-  자신의 ETag로 `companies.get(id, if_none_match: etag)`를 호출하면 304에서 `nil`("변경 없음")을 반환합니다.
+- 기업·소스 조회도 기사 요청처럼 크레딧을 씁니다. 요청 1건당 1크레딧입니다(`get_many`는 ID별이 아니라 요청당 1). 304와 오류도 1크레딧입니다. 여기서도 429가 올 수 있습니다.
+- SDK는 기업 레코드를 캐시하지 않습니다. `companies.get`은 매번 요청을 보냅니다. `company.cache_info`에 응답의 `etag`와 `cache_control`이 있습니다.
+  크레딧을 아끼려면 레코드를 직접 보관하고 `max-age` 동안 다시 호출하지 마세요. ETag를 다시 넘길 수도 있습니다.
+  `companies.get(id, if_none_match: etag)`는 `If-None-Match`를 보내고 304에서 `nil`("변경 없음")을 반환합니다. 304도 1크레딧이므로 아끼는 것은 다운로드이지 크레딧이 아닙니다.
+  `if_none_match`가 없으면 `If-None-Match`를 보내지 않습니다. 주요 기업 필드는 기사 페이로드에 이미 들어 있습니다.
 - `CompanyList`와 `SourceList`는 Enumerable입니다. 읽을 수 없는 항목은 제외되고 경고로 기록되며 `skipped`
   (인덱스, 원본 JSON, 이유)에 남습니다. `search`의 페이지에도 `skipped`가 있습니다.
 
@@ -264,7 +267,6 @@ client = Finlight::Client.new(
 | `burst_wait` | 10초, `Retry-After`가 없을 때만 |
 | `max_pages` | 10 |
 | `max_response_bytes` | 32 MiB |
-| `company_cache_size` | 256 (0 = 끔) |
 | `ping_interval`, `watchdog_timeout`, `rotation_interval` | 25초, 60초, 115분 |
 | `reconnect_base_delay`, `reconnect_max_delay` | 1초, 30초 |
 | `long_backoff` | 60초 |

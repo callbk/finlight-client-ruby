@@ -257,7 +257,8 @@ module Finlight
     end
   end
 
-  # ETag data of a record from companies.get.
+  # ETag data of a record from companies.get, for callers who cache records themselves.
+  # `not_modified` is always false: the SDK keeps no cache and returns nil on a 304.
   CacheInfo = Data.define(:etag, :cache_control, :not_modified)
 
   # A company from the companies endpoints.

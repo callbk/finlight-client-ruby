@@ -6,10 +6,15 @@
 v3 webhooks). Code written for 0.x does not run unchanged. To stay on 0.x, pin
 `gem "finlight-client", "~> 0.1.0"`. Migration guide: <https://docs.finlight.me/migration/v2-to-v3>
 
-Contract kit: 3.0.0-rc.5.
+Contract kit: 3.0.0-rc.6.
 
 ### Removed
 
+- `company_cache_size` (config) and the SDK's own cache of company records, removed in contract 3.0.0-rc.6.
+  The SDK does not cache: `companies.get` sends `If-None-Match` only with your `if_none_match`, and a 304
+  returns `nil`, never a stored record. Passing `company_cache_size` raises `Finlight::ValidationError`
+  (unknown config key). To save credits keep the records yourself (ETag and Cache-Control are in
+  `cache_info`) and do not call again within `max-age`; a 304 also costs 1 credit.
 - Everything from API v1 and v2: `Finlight::Client#websocket` and `#raw_websocket`, `ArticleService`,
   `SourceService`, `WebhookService`, `ApiClient`, the v2 models and params, `FlexTime`, `BlockedError`,
   `Finlight::Client::VERSION` and `CLIENT_VERSION`.
@@ -19,11 +24,11 @@ Contract kit: 3.0.0-rc.5.
 ### Added
 
 - `Finlight::Client` with `articles.search`, `articles.search_all`, `articles.get`, `articles.get_by_link`,
-  `companies.search`, `companies.get_many`, `companies.get` (with ETag revalidation and `cache_info`) and
+  `companies.search`, `companies.get_many`, `companies.get` (with `if_none_match` and `cache_info`) and
   `sources.list`. Parameters are explicit keyword arguments; unknown keys and wrong shapes raise
   `Finlight::ValidationError` before any request. Only the keys you pass are sent.
 - Company and source lookups cost 1 credit per request (`get_many` 1 per request, not per id), like
-  article requests. A 304 revalidation and errors cost 1 credit too. A 429 is possible on lookups too.
+  article requests. A 304 and errors cost 1 credit too. A 429 is possible on lookups too.
 - `search_all` freezes the request body and changes only the cursor; it stops after `max_pages` (default 10),
   logs a warning and keeps `next_cursor`. It can be iterated once.
 - Immutable `Data` models (`Article`, `Company`, `CompanyRecord`, `Source`, ...) that ignore unknown keys,

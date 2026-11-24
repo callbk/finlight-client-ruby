@@ -2,14 +2,12 @@
 
 module Finlight
   # `client.companies`: company lookups (needs the entityAccess entitlement, ForbiddenError otherwise).
-  # Each request costs 1 credit from the monthly quota, like an article request. A 304
-  # revalidation and error answers cost 1 credit too.
+  # Each request costs 1 credit from the monthly quota, like an article request. A 304 and error
+  # answers cost 1 credit too. The SDK keeps no cache of company records.
   class Companies
     def initialize(http, config)
       @http = http
       @config = config
-      @cache = {}
-      @mutex = Mutex.new
     end
 
     def inspect
@@ -37,9 +35,11 @@ module Finlight
 
     # GET /v3/companies/{companyId}.
     #
-    # With `if_none_match` (your own ETag) a 304 returns nil ("not modified"). Without it the SDK
-    # revalidates its own cached copy and returns that copy on 304. A miss raises NotFoundError.
-    # Every call costs 1 credit, a 304 revalidation included.
+    # The SDK keeps no cache of company records. The answer's ETag and Cache-Control are in
+    # `record.cache_info`; to save credits keep the record yourself and do not call again within
+    # max-age. With `if_none_match` (your own ETag) the SDK sends If-None-Match and a 304 returns nil
+    # ("not modified"). Without it no If-None-Match is sent. A miss raises NotFoundError.
+    # Every call costs 1 credit, a 304 included.
     #
     # @return [CompanyRecord, nil]
     def get(company_id, if_none_match: nil)
@@ -48,28 +48,15 @@ module Finlight
       end
 
       Params.string!(if_none_match, "if_none_match", non_empty: true) unless if_none_match.nil?
-      cached = if_none_match.nil? ? cache_get(company_id) : nil
-      etag = if_none_match || cached&.cache_info&.etag
-      headers = etag ? { "If-None-Match" => etag } : nil
+      headers = if_none_match ? { "If-None-Match" => if_none_match } : nil
       response = @http.call("GET", "/v3/companies/#{company_id}", headers: headers, ok: [200, 304])
-      if response.status == 304
-        return nil unless if_none_match.nil? && cached
-
-        info = CacheInfo.new(etag: response.headers["etag"] || etag,
-                             cache_control: response.headers["cache-control"] || cached.cache_info.cache_control,
-                             not_modified: true)
-        record = cached.__with_cache_info(info)
-        cache_put(company_id, record)
-        return record
-      end
+      return nil if response.status == 304
 
       json = Decode.parse(response.body, "response")
       record = CompanyRecord.decode(Decode.envelope(json, "company"), "$.company")
       info = CacheInfo.new(etag: response.headers["etag"], cache_control: response.headers["cache-control"],
                            not_modified: false)
-      record = record.__with_cache_info(info)
-      cache_put(company_id, record) if info.etag
-      record
+      record.__with_cache_info(info)
     end
 
     private
@@ -80,26 +67,6 @@ module Finlight
       items, skipped = Decode.entries(Decode.envelope(json, "companies"), CompanyRecord, "$.companies",
                                       @config.logger)
       CompanyList.new(items, skipped)
-    end
-
-    def cache_get(id)
-      return nil if @config.company_cache_size.zero?
-
-      @mutex.synchronize do
-        record = @cache.delete(id)
-        @cache[id] = record if record
-        record
-      end
-    end
-
-    def cache_put(id, record)
-      return if @config.company_cache_size.zero?
-
-      @mutex.synchronize do
-        @cache.delete(id)
-        @cache[id] = record
-        @cache.shift while @cache.size > @config.company_cache_size
-      end
     end
   end
 

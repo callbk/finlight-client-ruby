@@ -94,17 +94,20 @@ article = client.articles.get_by_link("https://www.reuters.com/...")
 
 companies = client.companies.search("NVDA", mic: "XNAS") # at most 10, no pages
 companies = client.companies.get_many([4821, 1001])
-company = client.companies.get(4821)                     # revalidated with its ETag next time
-puts company.cache_info.etag
+company = client.companies.get(4821)
+etag = company.cache_info.etag                           # keep it with the record if you cache it
+company = client.companies.get(4821, if_none_match: etag) # nil on 304 ("not modified")
 
 sources = client.sources.list
 ```
 
 - 見つからない場合は `Finlight::NotFoundError` です。空の結果にはなりません。記事 ID 導入前に収録された記事は ID では 404 になるため、リンクで参照してください。
 - `companies.*` には `entityAccess` 権限が必要です（ない場合は `Finlight::ForbiddenError`）。
-- 企業・ソースの参照も記事リクエストと同じくクレジットを消費します。リクエスト 1 回につき 1 クレジット（`get_many` は ID ごとではなく 1 リクエストで 1）。304 の再検証とエラーも 1 クレジットです。ここでも 429 が返ることがあります。
-- `companies.get` は最大 256 件（`company_cache_size`）を保持し、ETag で再検証します。304 ではキャッシュのレコードを返します。
-  自分の ETag を使う `companies.get(id, if_none_match: etag)` は 304 で `nil`（「変更なし」）を返します。
+- 企業・ソースの参照も記事リクエストと同じくクレジットを消費します。リクエスト 1 回につき 1 クレジット（`get_many` は ID ごとではなく 1 リクエストで 1）。304 とエラーも 1 クレジットです。ここでも 429 が返ることがあります。
+- SDK は企業レコードをキャッシュしません。`companies.get` は毎回リクエストになります。`company.cache_info` に応答の `etag` と `cache_control` があります。
+  クレジットを節約したい場合は、レコードを自分で保持し、`max-age` の間は再度呼び出さないでください。ETag を返すこともできます。
+  `companies.get(id, if_none_match: etag)` は `If-None-Match` を送り、304 で `nil`（「変更なし」）を返します。304 も 1 クレジットなので、節約できるのはダウンロードでクレジットではありません。
+  `if_none_match` がなければ `If-None-Match` は送りません。主な企業項目は記事のペイロードにすでに含まれています。
 - `CompanyList` と `SourceList` は Enumerable です。読めないエントリは除外され、警告としてログに出て、`skipped`
   （インデックス、生の JSON、理由）に残ります。`search` のページにも `skipped` があります。
 
@@ -264,7 +267,6 @@ client = Finlight::Client.new(
 | `burst_wait` | 10 秒、`Retry-After` がない場合のみ |
 | `max_pages` | 10 |
 | `max_response_bytes` | 32 MiB |
-| `company_cache_size` | 256（0 = 無効） |
 | `ping_interval`、`watchdog_timeout`、`rotation_interval` | 25 秒、60 秒、115 分 |
 | `reconnect_base_delay`、`reconnect_max_delay` | 1 秒、30 秒 |
 | `long_backoff` | 60 秒 |

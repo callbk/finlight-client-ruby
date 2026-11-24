@@ -24,7 +24,8 @@ module LookupExample
     matches = client.companies.search("NVDA", mic: "XNAS")
     matches.each { |c| puts "company: #{c.company_id} #{c.name} #{c.listings.map(&:mic).join(",")}" }
     if matches.any?
-      record = client.companies.get(matches.first.company_id) # revalidated with its ETag next time
+      # The SDK keeps no cache; keep the record and its ETag yourself to skip calls within max-age.
+      record = client.companies.get(matches.first.company_id)
       puts "record: #{record.name} #{record.sector} etag: #{record.cache_info&.etag}"
     end
 

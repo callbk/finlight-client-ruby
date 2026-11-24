@@ -93,8 +93,9 @@ article = client.articles.get_by_link("https://www.reuters.com/...")
 
 companies = client.companies.search("NVDA", mic: "XNAS") # at most 10, no pages
 companies = client.companies.get_many([4821, 1001])
-company = client.companies.get(4821)                     # revalidated with its ETag next time
-puts company.cache_info.etag
+company = client.companies.get(4821)
+etag = company.cache_info.etag                           # keep it with the record if you cache it
+company = client.companies.get(4821, if_none_match: etag) # nil on 304 ("not modified")
 
 sources = client.sources.list
 ```
@@ -103,10 +104,13 @@ sources = client.sources.list
   ids existed answer 404 by id; look them up by link.
 - `companies.*` needs the `entityAccess` entitlement (`Finlight::ForbiddenError` otherwise).
 - Lookups cost credits like article requests: 1 credit per request (`get_many` 1 per request, not per
-  id). A 304 revalidation and errors cost 1 credit too. A 429 is possible here too.
-- `companies.get` keeps up to 256 records (`company_cache_size`) and revalidates them with their ETag.
-  A 304 returns the cached record. With your own ETag, `companies.get(id, if_none_match: etag)` returns
-  `nil` on 304 ("not modified").
+  id). A 304 and errors cost 1 credit too. A 429 is possible here too.
+- The SDK does not cache company records. Every `companies.get` is a request. `company.cache_info` has the
+  `etag` and `cache_control` of the answer. To save credits, keep the records yourself and do not call
+  again within `max-age`. You may pass the ETag back: `companies.get(id, if_none_match: etag)` sends
+  `If-None-Match` and returns `nil` on 304 ("not modified"). A 304 also costs 1 credit, so it saves the
+  download, not the credit. Without `if_none_match` no `If-None-Match` is sent. The article payload already
+  carries the main company fields.
 - `CompanyList` and `SourceList` are Enumerable. Entries that could not be read are left out, logged
   as a warning and kept in `skipped` (index, raw JSON, reason). Pages of `search` have `skipped` too.
 
@@ -289,7 +293,6 @@ All times are seconds (Float). You can also build a `Finlight::Config` and pass 
 | `burst_wait` | 10 s, only without `Retry-After` |
 | `max_pages` | 10 |
 | `max_response_bytes` | 32 MiB |
-| `company_cache_size` | 256 (0 = off) |
 | `ping_interval`, `watchdog_timeout`, `rotation_interval` | 25 s, 60 s, 115 min |
 | `reconnect_base_delay`, `reconnect_max_delay` | 1 s, 30 s |
 | `long_backoff` | 60 s |

@@ -45,8 +45,8 @@ RSpec.describe "live dev API", :live do
     if companies.any?
       record = client.companies.get(companies.first.company_id)
       expect(record.cache_info.etag).to be_a(String)
-      again = client.companies.get(record.company_id) # revalidated with the cached ETag
-      expect(again.company_id).to eq(record.company_id)
+      again = client.companies.get(record.company_id, if_none_match: record.cache_info.etag) # 304: nil
+      expect(again.nil? || again.company_id == record.company_id).to be(true)
     end
   rescue Finlight::ForbiddenError
     skip "this key has no entityAccess"
