@@ -21,14 +21,14 @@ RSpec.describe "REST transport, errors and retries" do
     ]
     cases.each do |extra, want|
       body = JSON.generate({ "code" => "RATE_LIMITED", "type" => "t" }.merge(extra))
-      error = Finlight::ErrorParser.from_response(429, "application/problem+json", body, sent_request_id: "x")
+      error = FinlightInternal::ErrorParser.from_response(429, "application/problem+json", body, sent_request_id: "x")
       expect(error).to be_a(Finlight::RateLimitedError)
       expect(error.limit_type).to eq(want), extra.inspect
     end
   end
 
   it "reads the NestJS form with a String array message" do
-    error = Finlight::ErrorParser.from_response(
+    error = FinlightInternal::ErrorParser.from_response(
       400, "application/json", '{"statusCode":400,"message":["a is wrong","b is wrong"],"error":"Bad Request"}',
       sent_request_id: "sent-id"
     )
@@ -83,6 +83,39 @@ RSpec.describe "REST transport, errors and retries" do
     }
   ensure
     listener&.close
+  end
+
+  it "passes a caller Timeout.timeout(x, Timeout::Error) through unchanged after one attempt (R-RETRY-1)" do
+    listener = TCPServer.new("127.0.0.1", 0)
+    accepted = Queue.new
+    acceptor = Thread.new do
+      loop { accepted << listener.accept }
+    rescue IOError
+      nil
+    end
+    client = rest_client(base_url: "http://127.0.0.1:#{listener.addr[1]}", timeout: 5, max_retries: 3)
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    expect { Timeout.timeout(0.3, Timeout::Error) { client.articles.search(query: "x") } }
+      .to raise_error(Timeout::Error) { |e| expect(e).not_to be_a(Finlight::Error) }
+    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 2
+    expect(accepted.size).to eq(1)
+    expect(recording_clock.sleeps).to eq([])
+  ensure
+    listener&.close
+    acceptor&.join(1)
+    acceptor&.kill
+    accepted&.size&.times { accepted.pop.close }
+  end
+
+  it "passes a caller Timeout::Error raised inside an injected HTTP client through unchanged" do
+    calls = 0
+    fake = lambda do |*|
+      calls += 1
+      raise Timeout::Error, "caller abort"
+    end
+    client = Finlight::Client.new(api_key: "k", http_client: fake, clock: recording_clock, max_retries: 3)
+    expect { client.sources.list }.to raise_error(Timeout::Error, "caller abort")
+    expect(calls).to eq(1)
   end
 
   it "stops at total_timeout, burst wait included" do

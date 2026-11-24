@@ -15,12 +15,12 @@ RSpec.describe "models" do
     expect(article.first_seen_at_time).to be_nil
     expect(article.revised_at_time).to be_nil
     expect(article.sentiment.confidence).to eq(0.912345678)
-    frame = Finlight::Frames.decode('{"event":"connection.admitted","data":{"serverNow":1763932800123}}')
+    frame = FinlightInternal::Frames.decode('{"event":"connection.admitted","data":{"serverNow":1763932800123}}')
     expect(frame.fields[:server_now]).to eq(1_763_932_800_123)
   end
 
   it "parses times strictly (RFC 3339 with Z or an offset only)" do
-    parse = Finlight::TimeParse.method(:parse)
+    parse = FinlightInternal::TimeParse.method(:parse)
     expect(parse.call("2026-11-23T21:04:05.123Z")).to eq(Time.utc(2026, 11, 23, 21, 4, 5.123r))
     expect(parse.call("2026-11-23T22:04:05+01:00")).to eq(Time.utc(2026, 11, 23, 21, 4, 5))
     ["2026-11-23T21:04:05", "2026-11-23", "1763932800", "2026-02-30T00:00:00Z", "", nil, 5,

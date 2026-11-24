@@ -9,4 +9,7 @@ module Finlight
 
   # User-Agent sent on every REST request and WebSocket dial.
   USER_AGENT = "finlight-client-ruby/#{VERSION}".freeze
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :USER_AGENT
 end

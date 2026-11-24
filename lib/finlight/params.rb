@@ -46,7 +46,9 @@ module Finlight
     end
 
     def relevance!(value, name)
-      fail!("#{name} must be a number from 0 to 1", name) unless value.is_a?(Numeric) && value.between?(0, 1)
+      # Only Integer and Float go out as JSON numbers; Rational, BigDecimal, Complex do not.
+      number = value.is_a?(Integer) || (value.is_a?(Float) && value.finite?)
+      fail!("#{name} must be an Integer or Float from 0 to 1", name) unless number && value.between?(0, 1)
       value
     end
 
@@ -158,4 +160,7 @@ module Finlight
       frame.freeze
     end
   end
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :Params
 end

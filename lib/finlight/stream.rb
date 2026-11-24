@@ -238,8 +238,9 @@ module Finlight
       if @config.ws_connect
         @config.ws_connect.call(@url, dial_headers)
       else
-        Transport::DriverConnection.connect(@url, dial_headers, connect_timeout: @config.connect_timeout,
-                                                                max_message_bytes: @config.max_message_bytes)
+        # DriverConnection is a private constant of Transport (internal); const_get reaches it.
+        Transport.const_get(:DriverConnection).connect(@url, dial_headers, connect_timeout: @config.connect_timeout,
+                                                                           max_message_bytes: @config.max_message_bytes)
       end
     end
 
@@ -334,7 +335,8 @@ module Finlight
         end
         current = session
         @connections += 1
-        if reason
+        # Only after a new connection that is not the first: a refused first dial is no reconnect.
+        if reason && @connections > 1
           queue_hook(:on_reconnect, ReconnectInfo.new(last_seen_at: @last_seen_at, reason: reason,
                                                       connection: @connections))
         end
@@ -665,5 +667,7 @@ module Finlight
         end
       end
     end
+
+    private_constant :Session
   end
 end

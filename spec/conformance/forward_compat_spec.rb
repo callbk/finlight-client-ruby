@@ -31,22 +31,22 @@ RSpec.describe "Conformance F: forward compatibility" do
       wire = env["wire"]
       case env["kind"]
       when "rest.search"
-        page = Finlight::Decode.article_page(wire)
+        page = FinlightInternal::Decode.article_page(wire)
         expect(page.articles.size).to eq(1)
         expect(page.pagination.has_more).to be(false)
       when "rest.article"
-        expect(Finlight::Decode.article(wire).id).to eq(wire["article"]["id"])
+        expect(FinlightInternal::Decode.article(wire).id).to eq(wire["article"]["id"])
       when "webhook"
-        event = Finlight::Decode.webhook_event(wire)
+        event = FinlightInternal::Decode.webhook_event(wire)
         expect(event.event_id).to eq(wire["eventId"])
         expect(event.data.id).to eq(wire["data"]["id"])
         expect(event.raw_json["deliveryAttempt"]).to eq(1)
       when "ws.article"
-        frame = Finlight::Frames.decode(JSON.generate(wire))
+        frame = FinlightInternal::Frames.decode(JSON.generate(wire))
         expect([frame.type, frame.kind]).to eq([:article, "created"])
         expect(Finlight::Article.decode(frame.data).id).to eq(wire["data"]["id"])
       when "ws.control"
-        expect(Finlight::Frames.decode(JSON.generate(wire)).type).to eq(:pong)
+        expect(FinlightInternal::Frames.decode(JSON.generate(wire)).type).to eq(:pong)
       else raise "unknown envelope #{env["kind"]}"
       end
       env["kind"]
@@ -58,7 +58,7 @@ RSpec.describe "Conformance F: forward compatibility" do
     fx = Kit.load("fixtures/forward-compat/unknown-events-and-codes.json")
     fx["items"].each do |item|
       if item["kind"] == "webhook.event"
-        expect(Finlight::Decode.webhook_event(item["wire"]).event).to eq("article.retracted")
+        expect(FinlightInternal::Decode.webhook_event(item["wire"]).event).to eq("article.retracted")
         next
       end
       mock_http.reset

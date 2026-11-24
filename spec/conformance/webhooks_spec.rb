@@ -13,7 +13,7 @@ RSpec.describe "Conformance W: webhooks" do
       raw = Base64.strict_decode64(fx["request"]["rawBodyBase64"])
       expect(raw.dup.force_encoding("UTF-8")).to eq(fx["request"]["rawBody"])
       headers = fx["request"]["headers"]
-      now = Finlight::TimeParse.parse(fx["verify"]["now"])
+      now = FinlightInternal::TimeParse.parse(fx["verify"]["now"])
       tolerance = fx["verify"]["toleranceSeconds"]
       expect_ = fx["expect"]
       run = ->(body) { Finlight::Webhooks.construct_event(body, headers, fx["secret"], tolerance: tolerance, now: now) }

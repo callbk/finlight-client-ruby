@@ -127,7 +127,7 @@ RSpec.describe "configuration (R-CONFIG-1)" do
 
   it "takes the version from one constant" do
     expect(Finlight::VERSION).to match(/\A\d+\.\d+\.\d+\z/)
-    expect(Finlight::USER_AGENT).to eq("finlight-client-ruby/#{Finlight::VERSION}")
+    expect(FinlightInternal::USER_AGENT).to eq("finlight-client-ruby/#{Finlight::VERSION}")
     spec = Gem::Specification.load(File.join(Kit::ROOT, "finlight-client.gemspec"))
     expect(spec.version.to_s).to eq(Finlight::VERSION)
   end

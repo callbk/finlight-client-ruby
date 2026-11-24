@@ -378,4 +378,7 @@ module Finlight
       class_for_status(status).new(message, **fields)
     end
   end
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :ErrorParser
 end

@@ -16,12 +16,12 @@ RSpec.describe "v3-only scope" do
     all = Kit.snake_args(Kit.load("fixtures/requests/search-all-parameters.json")["sdk"]["args"])
     rest_client.articles.search(**all, cursor: "c")
     bodies = [mock_http.requests[0].body]
-    bodies << JSON.generate(Finlight::Params.subscribe_frame(
+    bodies << JSON.generate(FinlightInternal::Params.subscribe_frame(
                               { query: "q", sources: ["a"], exclude_sources: ["b"], opt_in_sources: ["c"],
                                 language: "en", tickers: ["X"], countries: ["US"], categories: ["markets"],
                                 exclude_empty_content: true, include_updates: true, include: ["content"] }, raw: false
                             ))
-    bodies << JSON.generate(Finlight::Params.subscribe_frame(
+    bodies << JSON.generate(FinlightInternal::Params.subscribe_frame(
                               { query: "q", sources: ["a"], exclude_sources: ["b"], language: "en",
                                 include_updates: false }, raw: true
                             ))
@@ -50,5 +50,25 @@ RSpec.describe "v3-only scope" do
       end
     end
     expect(hits).to eq([])
+  end
+
+  it "keeps the internal building blocks out of the public API (sdk-style name table)" do
+    %w[USER_AGENT SystemClock TimeParse WireModel TimeReaders EntryList Decode Params ErrorParser HttpTransport
+       Frames].each do |name|
+      expect { Finlight.const_get(name) && eval("Finlight::#{name}", binding, __FILE__, __LINE__) } # rubocop:disable Security/Eval
+        .to raise_error(NameError, /private constant/)
+    end
+    expect { Finlight::Stream::Session }.to raise_error(NameError, /private constant/)
+    expect { Finlight::Transport::DriverConnection }.to raise_error(NameError, /private constant/)
+    # The custom transport seam stays public.
+    expect(Finlight::Transport::DialRefused.new(503).status).to eq(503)
+    expect(Finlight::Transport::Closed.new(1006).code).to eq(1006)
+  end
+
+  it "stops the 0.x entry point require \"finlight/client\" with a clear LoadError (R-NAMES-1)" do
+    expect { require "finlight/client" }.to raise_error(LoadError) { |e|
+      expect(e.message).to include('require "finlight"')
+      expect(e.message).to include("https://docs.finlight.me/migration/v2-to-v3")
+    }
   end
 end

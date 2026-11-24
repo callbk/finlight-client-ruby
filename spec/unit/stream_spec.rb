@@ -167,8 +167,35 @@ RSpec.describe "streams" do
     expect(server.dial_count).to eq(1)
     clock.advance(clock.next_deadline - clock.now)
     server.next_connection.recv
+    sleep 0.05
+    expect(reconnects).to eq([]) # the first connection is no reconnect, even after a refused dial
+    stream.close
+    thread.join(3)
+  end
+
+  it "fires on_reconnect only after the first connection and keeps the dial reason (sdk-style 6.1)" do
+    reconnects = []
+    server.plan([503, ""])
+    stream = client.stream(query: "x", on_reconnect: ->(i) { reconnects << i })
+    _items, thread = consume(stream)
+    wait_until("the redial wait") { clock.next_deadline }
+    clock.advance(clock.next_deadline - clock.now)
+    conn = server.next_connection
+    conn.recv
+    conn.send_frame(admitted_frame)
+    sleep 0.05
+    expect(reconnects).to eq([]) # first dial refused, then admitted: no on_reconnect
+
+    server.plan([429, '{"message":"Too Many Requests"}'])
+    conn.close(1001)
+    wait_until("the 429 dial") { server.dial_count == 3 || clock.next_deadline }
+    clock.advance(clock.next_deadline - clock.now) if server.dial_count < 3
+    wait_until("the 429 dial") { server.dial_count == 3 }
+    wait_until("the long wait") { clock.next_deadline }
+    clock.advance(clock.next_deadline - clock.now)
+    server.next_connection.recv
     wait_until("the reconnect hook") { reconnects.any? }
-    expect(reconnects[0].reason).to eq("rate_limited")
+    expect(reconnects.map { |i| [i.reason, i.connection] }).to eq([["rate_limited", 2]])
     stream.close
     thread.join(3)
   end
@@ -187,6 +214,31 @@ RSpec.describe "streams" do
     expect(items.pop(timeout: 3).kind).to eq("created")
     stream.close
     thread.join(3)
+  end
+
+  it "closes the socket of a dial that is still waiting for the upgrade answer when the stream closes (R-WS-6)" do
+    listener = TCPServer.new("127.0.0.1", 0)
+    stream = Finlight::Client.new(api_key: Kit::KEY, wss_url: "ws://127.0.0.1:#{listener.addr[1]}", clock: clock,
+                                  connect_timeout: 30).stream(query: "x")
+    _items, thread = consume(stream)
+    socket = listener.accept # the upgrade request arrives, the answer never comes
+    stream.close
+    thread.join(3)
+    eof = false
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+    until eof || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      begin
+        socket.read_nonblock(4096) # drain the upgrade request
+      rescue IO::WaitReadable
+        socket.wait_readable(0.1)
+      rescue EOFError, Errno::ECONNRESET
+        eof = true
+      end
+    end
+    expect(eof).to be(true)
+  ensure
+    socket&.close
+    listener&.close
   end
 
   it "runs several streams of one client at once, and client.close stops them" do

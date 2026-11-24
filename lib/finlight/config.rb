@@ -163,4 +163,7 @@ module Finlight
       raise ValidationError.new("#{key} must be an Integer >= #{min}", param: key.to_s)
     end
   end
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :SystemClock
 end

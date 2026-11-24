@@ -88,7 +88,7 @@ RSpec.describe "examples" do
     app = WebhookEndpoint.new(secret: secret) { |kind, item| handled << [kind, item] }
     request = Rack::MockRequest.new(app)
     post = lambda do |body, good: true|
-      ts = Finlight::TimeParse.format(Time.now)
+      ts = FinlightInternal::TimeParse.format(Time.now)
       sig = good ? OpenSSL::HMAC.hexdigest("SHA256", secret, "#{ts}.#{body}") : "0" * 64
       request.post("/hook", input: body, "CONTENT_TYPE" => "application/json",
                             "HTTP_X_WEBHOOK_TIMESTAMP" => ts, "HTTP_X_WEBHOOK_SIGNATURE" => "sha256=#{sig}")

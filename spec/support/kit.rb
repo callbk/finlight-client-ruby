@@ -7,6 +7,9 @@ module Kit
   ROOT = File.expand_path("../..", __dir__)
   DIR = File.join(ROOT, "conformance")
   KEY = "sk_0000000000000000000000000000000000000000000000000000000000000001"
+  # Plain lists that read as [] when their key is absent (no presence meaning). Every other absent
+  # key must decode to nil, never to [] or false (R-MODELS-1).
+  LIST_DEFAULTS = %w[media countries categories isins listings].freeze
 
   module_function
 
@@ -53,7 +56,12 @@ module Kit
       raise "#{parent.class} has no member for #{name}" unless parent.class.members.include?(member)
 
       value = parent.public_send(member)
-      state = if !parent.raw_json.key?(name) then "absent"
+      absent = !parent.raw_json.key?(name)
+      if absent && !value.nil? && !(value == [] && LIST_DEFAULTS.include?(name))
+        raise "#{name} is absent on the wire, but member #{member} holds #{value.inspect}"
+      end
+
+      state = if absent then "absent"
               elsif value.nil? then "null"
               elsif value == [] then "empty"
               else "value"

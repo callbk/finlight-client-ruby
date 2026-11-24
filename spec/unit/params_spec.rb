@@ -20,6 +20,9 @@ RSpec.describe "request parameters" do
     expect_local_rejection("languages") { client.articles.search(languages: []) }
     expect_local_rejection("min_relevance") { client.articles.search(min_relevance: 1.5) }
     expect_local_rejection("min_relevance") { client.articles.search(min_relevance: "0.5") }
+    expect_local_rejection("min_relevance") { client.articles.search(min_relevance: Rational(1, 2)) }
+    expect_local_rejection("min_relevance") { client.articles.search(min_relevance: Complex(1, 0)) }
+    expect_local_rejection("min_relevance") { client.articles.search(min_relevance: Float::NAN) }
     expect_local_rejection("include") { client.articles.search(include: %w[content companies events content]) }
     expect_local_rejection("has_content") { client.articles.search(has_content: "yes") }
     expect_local_rejection("from") { client.articles.search(from: 12) }
@@ -62,19 +65,19 @@ RSpec.describe "request parameters" do
   end
 
   it "builds the subscribe from a fixed list of keys, with payloadVersion the integer 3 (R-REQ-1)" do
-    frame = Finlight::Params.subscribe_frame({ query: "ticker:X" }, raw: false)
+    frame = FinlightInternal::Params.subscribe_frame({ query: "ticker:X" }, raw: false)
     expect(frame).to eq("payloadVersion" => 3, "query" => "ticker:X")
     expect(frame["payloadVersion"]).to be_an(Integer)
-    expect(Finlight::Params.subscribe_frame({ include: [] }, raw: false)).to eq("payloadVersion" => 3)
+    expect(FinlightInternal::Params.subscribe_frame({ include: [] }, raw: false)).to eq("payloadVersion" => 3)
   end
 
   it "formats dates and times (R-REQ-2)" do
-    expect(Finlight::Params.time!(Time.new(2026, 11, 1, 1, 2, 3.5r, "+01:00"), "from"))
+    expect(FinlightInternal::Params.time!(Time.new(2026, 11, 1, 1, 2, 3.5r, "+01:00"), "from"))
       .to eq("2026-11-01T00:02:03.500Z")
-    expect(Finlight::Params.time!(Date.new(2026, 11, 1), "from")).to eq("2026-11-01")
-    expect(Finlight::Params.time!(DateTime.new(2026, 11, 1, 5, 0, 0, "+02:00"), "from"))
+    expect(FinlightInternal::Params.time!(Date.new(2026, 11, 1), "from")).to eq("2026-11-01")
+    expect(FinlightInternal::Params.time!(DateTime.new(2026, 11, 1, 5, 0, 0, "+02:00"), "from"))
       .to eq("2026-11-01T03:00:00.000Z")
-    expect(Finlight::Params.time!("yesterday-ish", "from")).to eq("yesterday-ish")
+    expect(FinlightInternal::Params.time!("yesterday-ish", "from")).to eq("yesterday-ish")
   end
 
   it "puts include and ids into one comma-joined query value and encodes the link once" do
@@ -94,8 +97,8 @@ RSpec.describe "request parameters" do
     %w[tr_TR.UTF-8 de_DE.UTF-8].each do |locale|
       ENV["LANG"] = locale
       ENV["LC_ALL"] = locale
-      body = Finlight::Params.json(Finlight::Params.search_body(min_relevance: 0.5, query: "I", limit: 10,
-                                                                from: Time.utc(2026, 1, 1)))
+      params = FinlightInternal::Params
+      body = params.json(params.search_body(min_relevance: 0.5, query: "I", limit: 10, from: Time.utc(2026, 1, 1)))
       expect(body).to eq('{"minRelevance":0.5,"query":"I","limit":10,"from":"2026-01-01T00:00:00.000Z"}')
     end
   ensure

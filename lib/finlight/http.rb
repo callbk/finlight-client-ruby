@@ -17,7 +17,9 @@ module Finlight
       IOError, EOFError, SocketError, SystemCallError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse,
       Net::ProtocolError, Zlib::Error
     ].freeze
-    TIMEOUT_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ::Timeout::Error].freeze
+    # Only the SDK's own socket timeouts. A bare ::Timeout::Error is the caller's abort
+    # (Timeout.timeout, Thread#raise): it is never retried and reaches the caller unchanged.
+    TIMEOUT_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout].freeze
 
     class TooLarge < StandardError; end
 
@@ -153,6 +155,8 @@ module Finlight
     rescue *TIMEOUT_ERRORS => e
       raise TimeoutError, "request timed out (#{e.class.name})"
     rescue StandardError => e
+      raise if e.is_a?(::Timeout::Error) # the caller's own abort, passed through unchanged
+
       raise NetworkError, "network error: #{e.class.name}"
     end
 
@@ -199,4 +203,7 @@ module Finlight
       request
     end
   end
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :HttpTransport
 end

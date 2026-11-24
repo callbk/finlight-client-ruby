@@ -5,7 +5,8 @@ Every case of the finlight API v3 contract kit (`conformance/conformance.md`, ki
 description starts with the case id and it carries the metadata `kit_case: "<id>"` (D-10 has one
 example per sub-case of the matrix). `spec/conformance/case_map_spec.rb` fails when a kit case is
 missing here, when the mapped file has no example for it, or when `conformance/` does not match its
-MANIFEST.
+MANIFEST. It needs the whole suite loaded (`bundle exec rake` or `bundle exec rspec`) and skips itself when only
+some spec files run.
 
 Re-sync the kit with one command: `bundle exec rake "conformance:sync[<kit dir>]"`
 (or `ruby scripts/sync_conformance.rb --from <kit dir>`).

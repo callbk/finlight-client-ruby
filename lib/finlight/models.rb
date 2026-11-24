@@ -468,4 +468,7 @@ module Finlight
       WebhookEvent.decode(json)
     end
   end
+
+  # Internal: not part of the public API (only the sdk-style name table is), may change in any release.
+  private_constant :WireModel, :TimeReaders, :EntryList, :Decode
 end

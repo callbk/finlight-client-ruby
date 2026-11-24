@@ -13,7 +13,8 @@ Contract kit: 3.0.0-rc.3.
 - Everything from API v1 and v2: `Finlight::Client#websocket` and `#raw_websocket`, `ArticleService`,
   `SourceService`, `WebhookService`, `ApiClient`, the v2 models and params, `FlexTime`, `BlockedError`,
   `Finlight::Client::VERSION` and `CLIENT_VERSION`.
-- The entry point `require "finlight/client"`; use `require "finlight"`.
+- The entry point `require "finlight/client"`; use `require "finlight"`. `require "finlight/client"` now
+  raises a `LoadError` that says so and links the migration guide.
 
 ### Added
 

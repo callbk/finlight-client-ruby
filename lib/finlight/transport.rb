@@ -75,8 +75,9 @@ module Finlight
       end
 
       def open(connect_timeout)
+        opened = false
         deadline = monotonic + connect_timeout
-        @io = open_socket(deadline)
+        open_socket(deadline)
         @driver = WebSocket::Driver.client(self, max_length: @max_message_bytes)
         @headers.each { |name, value| @driver.set_header(name, value) }
         @driver.on(:open) { @open = true }
@@ -88,9 +89,10 @@ module Finlight
         end
         @driver.start
         handshake(deadline)
-      rescue StandardError
-        close_io
-        raise
+        opened = true
+      ensure
+        # ensure, not rescue: also runs when Stream#close kills a thread stuck in the dial (R-WS-6).
+        close_io unless opened
       end
 
       # websocket-driver socket interface
@@ -148,16 +150,18 @@ module Finlight
         %w[wss https].include?(@uri.scheme)
       end
 
+      # Sets @io as soon as a socket exists, so an aborted open can always close it.
       def open_socket(deadline)
         port = @uri.port || (secure? ? 443 : 80)
-        tcp = Socket.tcp(@uri.host, port, connect_timeout: remaining(deadline))
-        return tcp unless secure?
+        @io = tcp = Socket.tcp(@uri.host, port, connect_timeout: remaining(deadline))
+        return unless secure?
 
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
         ssl = OpenSSL::SSL::SSLSocket.new(tcp, context)
         ssl.hostname = @uri.host
         ssl.sync_close = true
+        @io = ssl
         loop do
           result = ssl.connect_nonblock(exception: false)
           break unless %i[wait_readable wait_writable].include?(result)
@@ -165,7 +169,6 @@ module Finlight
           wait(ssl, result, deadline)
         end
         ssl.post_connection_check(@uri.host)
-        ssl
       rescue Errno::ETIMEDOUT, IO::TimeoutError
         raise Finlight::TimeoutError, "WebSocket connect timed out"
       end
@@ -233,5 +236,7 @@ module Finlight
         nil
       end
     end
+
+    private_constant :DriverConnection
   end
 end
