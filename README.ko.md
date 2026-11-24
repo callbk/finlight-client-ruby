@@ -56,6 +56,7 @@ page.articles.each { |article| puts "#{article.published_at} #{article.title}" }
 page = client.articles.search(
   query: "eventType:mna AND companyCountry:US",
   languages: ["en", "de"],
+  source_types: [Finlight::SourceType::NEWSWIRE, Finlight::SourceType::FINANCIAL_MEDIA],
   from: Time.utc(2026, 11, 1),      # a Time, a Date or a String
   event_types: ["mna"],
   min_relevance: 0.5,
@@ -79,6 +80,10 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 알 수 없는 키워드와 잘못된 형태(`limit: 0`, `languages: []`, 4개 이상의 `include` 값)는 전송 전에
 `Finlight::ValidationError`(`ArgumentError`이기도 함)를 발생시킵니다. `Time`은 밀리초가 있는 UTC ISO 8601,
 `Date`는 `YYYY-MM-DD`, 문자열은 그대로 전송됩니다.
+
+`source_types`와 `exclude_source_types`는 소스 유형으로 거릅니다(`Finlight::SourceType::ALL`, 예:
+`Finlight::SourceType::NEWSWIRE`). 분류되지 않은 소스의 기사는 `source_types`에 일치하지 않고,
+`exclude_source_types`에서는 남습니다. 둘 다 이미 받을 수 있는 소스를 좁히기만 합니다. 검색 전용이며 스트림에는 없습니다.
 
 ## 기사, 기업, 소스 조회
 
@@ -291,6 +296,8 @@ API 키, Webhook 시크릿, 서명, 전체 본문은 로그, 오류 메시지, `
 - 역할 도입 전에 태깅된 기사는 `role`과 `relevance`가 `nil`, `events`가 `[]`입니다.
 - ID 도입 전에 수집된 기사는 `articles.get(id)`가 404를 반환합니다. `get_by_link`를 쓰세요.
 - `available_at`은 오래된 기사에서는 `nil`이고, raw 스트림과 raw Webhook에서는 항상 `nil`입니다.
+- `source.type`과 `Source#type`은 소스가 분류되지 않았으면 `nil`입니다. 소스 유형이 생기기 전에 색인된
+  기사도 `nil`입니다. 소스가 다시 분류되어도 오래된 기사는 이전 유형을 유지합니다.
 
 ## 0.x에서 이전하기
 

@@ -6,7 +6,7 @@
 v3 webhooks). Code written for 0.x does not run unchanged. To stay on 0.x, pin
 `gem "finlight-client", "~> 0.1.0"`. Migration guide: <https://docs.finlight.me/migration/v2-to-v3>
 
-Contract kit: 3.0.0-rc.3.
+Contract kit: 3.0.0-rc.4.
 
 ### Removed
 
@@ -28,7 +28,12 @@ Contract kit: 3.0.0-rc.3.
   keep the raw JSON (`raw_json`, `to_wire`) and tell absent from null (`content_present?`,
   `sentiment_present?`, `companies_present?`, `events_present?`). Timestamps stay Strings, with strict
   `*_time` readers. Broken list entries are skipped, logged and kept in `skipped`.
-- Open vocabularies as String constants (`Finlight::EventType`, `Finlight::CompanyRole`, ...).
+- `articles.search` and `articles.search_all` take `source_types` and `exclude_source_types`
+  (`sourceTypes`, `excludeSourceTypes`). Streams do not take them.
+- Open vocabularies as String constants (`Finlight::EventType`, `Finlight::CompanyRole`,
+  `Finlight::SourceType`, ...). `Finlight::SourceType` has 7 values: `newswire`, `press_release`,
+  `financial_media`, `general_media`, `aggregator`, `blog`, `government`. `source.type` and `Source#type` are
+  `nil` when the source is not classified.
 - `client.stream(...)` and `client.raw_stream(...)`: a blocking `each` with ping and pong watchdog, rotation
   before the 2 hour limit, the same subscribe after every reconnect, a duplicate filter, hooks
   `on_admitted`, `on_reconnect`, `on_error` and `on_quota_wait`, and typed terminal errors

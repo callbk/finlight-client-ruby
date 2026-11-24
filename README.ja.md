@@ -56,6 +56,7 @@ page.articles.each { |article| puts "#{article.published_at} #{article.title}" }
 page = client.articles.search(
   query: "eventType:mna AND companyCountry:US",
   languages: ["en", "de"],
+  source_types: [Finlight::SourceType::NEWSWIRE, Finlight::SourceType::FINANCIAL_MEDIA],
   from: Time.utc(2026, 11, 1),      # a Time, a Date or a String
   event_types: ["mna"],
   min_relevance: 0.5,
@@ -79,6 +80,10 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 未知のキーワードや形式の誤り（`limit: 0`、`languages: []`、4 つ以上の `include`）は、送信前に
 `Finlight::ValidationError`（`ArgumentError` でもある）になります。`Time` はミリ秒付き UTC の ISO 8601、`Date` は
 `YYYY-MM-DD`、文字列はそのまま送信されます。
+
+`source_types` と `exclude_source_types` はソースの種類で絞り込みます（`Finlight::SourceType::ALL`、例：
+`Finlight::SourceType::NEWSWIRE`）。種類が未分類のソースの記事は `source_types` に一致せず、
+`exclude_source_types` では残ります。どちらも受け取れるソースを狭めるだけです。検索専用で、ストリームでは使えません。
 
 ## 記事・企業・ソースを参照する
 
@@ -291,6 +296,8 @@ API キー、Webhook シークレット、署名、ボディ全体がログ、�
 - ロール導入前にタグ付けされた記事は `role` と `relevance` が `nil`、`events` が `[]` です。
 - ID 導入前に収録された記事では `articles.get(id)` が 404 を返します。`get_by_link` を使ってください。
 - `available_at` は古い記事では `nil`、raw ストリームと raw Webhook では常に `nil` です。
+- `source.type` と `Source#type` は、ソースが未分類なら `nil` です。ソースの種類が導入される前に索引された記事も
+  `nil` です。ソースが再分類されても、古い記事は以前の種類のままです。
 
 ## 0.x からの移行
 

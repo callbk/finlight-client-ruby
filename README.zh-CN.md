@@ -56,6 +56,7 @@ page.articles.each { |article| puts "#{article.published_at} #{article.title}" }
 page = client.articles.search(
   query: "eventType:mna AND companyCountry:US",
   languages: ["en", "de"],
+  source_types: [Finlight::SourceType::NEWSWIRE, Finlight::SourceType::FINANCIAL_MEDIA],
   from: Time.utc(2026, 11, 1),      # a Time, a Date or a String
   event_types: ["mna"],
   min_relevance: 0.5,
@@ -79,6 +80,10 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 未知关键字和格式错误（`limit: 0`、`languages: []`、超过 3 个 `include` 值）会在发送前抛出
 `Finlight::ValidationError`（也是 `ArgumentError`）。`Time` 以带毫秒的 UTC ISO 8601 发送，
 `Date` 以 `YYYY-MM-DD` 发送，字符串原样发送。
+
+`source_types` 和 `exclude_source_types` 按来源类型筛选（`Finlight::SourceType::ALL`，例如
+`Finlight::SourceType::NEWSWIRE`）。未分类来源的文章不会匹配 `source_types`，在 `exclude_source_types` 下会保留。
+两者只会缩小你已能获取的来源范围。仅用于搜索，不用于流。
 
 ## 查询文章、公司和来源
 
@@ -291,6 +296,8 @@ API 密钥、Webhook 密钥、签名和完整的请求体绝不会出现在日�
 - 在引入角色之前打标签的文章，`role` 和 `relevance` 为 `nil`，`events` 为 `[]`。
 - 对于引入 id 之前收录的文章，`articles.get(id)` 返回 404，请使用 `get_by_link`。
 - 旧文章的 `available_at` 为 `nil`，raw 流和 raw Webhook 中始终为 `nil`。
+- 来源未分类时，`source.type` 和 `Source#type` 为 `nil`。来源类型出现之前索引的文章也为 `nil`。
+  来源重新分类后，旧文章保留原来的类型。
 
 ## 从 0.x 迁移
 

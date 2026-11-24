@@ -55,6 +55,7 @@ locally, so new server values work without an SDK update.
 page = client.articles.search(
   query: "eventType:mna AND companyCountry:US",
   languages: ["en", "de"],
+  source_types: [Finlight::SourceType::NEWSWIRE, Finlight::SourceType::FINANCIAL_MEDIA],
   from: Time.utc(2026, 11, 1),      # a Time, a Date or a String
   event_types: ["mna"],
   min_relevance: 0.5,
@@ -78,6 +79,11 @@ A result can be iterated once; a second pass raises `Finlight::ValidationError`.
 on where a walk stopped. Unknown keywords and wrong shapes (`limit: 0`, `languages: []`, more than 3
 `include` values) raise `Finlight::ValidationError` (an `ArgumentError`) before anything is sent.
 `Time` values go out as UTC ISO 8601 with milliseconds, `Date` values as `YYYY-MM-DD`, Strings unchanged.
+
+`source_types` and `exclude_source_types` filter by the type of the source (`Finlight::SourceType::ALL`,
+for example `Finlight::SourceType::NEWSWIRE`). Articles from unclassified sources never match
+`source_types` and are kept by `exclude_source_types`. Both only narrow the sources you already get. They
+exist for search only, not for streams.
 
 ## Look up articles, companies and sources
 
@@ -317,6 +323,8 @@ signatures and full bodies never appear in logs, error messages or `inspect` out
 - Articles tagged before roles existed have `role` and `relevance` `nil`, and `events` `[]`.
 - `articles.get(id)` answers 404 for articles indexed before ids existed. Use `get_by_link`.
 - `available_at` is `nil` on older articles and always `nil` on raw streams and raw webhooks.
+- `source.type` and `Source#type` are `nil` when the source is not classified. Articles indexed before
+  source types existed also have `nil`. After a source is reclassified, older articles keep the old type.
 
 ## Migrating from 0.x
 

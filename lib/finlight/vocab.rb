@@ -93,9 +93,17 @@ module Finlight
     ALL = [POSITIVE, NEGATIVE, NEUTRAL].freeze
   end
 
-  # Values of `source.type`. None are known today (the server sends null).
+  # Values of `source.type`, `Source#type` and the search filters `source_types` and
+  # `exclude_source_types`. `source.type` is nil when the source is not classified.
   module SourceType
-    ALL = [].freeze
+    NEWSWIRE = "newswire"
+    PRESS_RELEASE = "press_release"
+    FINANCIAL_MEDIA = "financial_media"
+    GENERAL_MEDIA = "general_media"
+    AGGREGATOR = "aggregator"
+    BLOG = "blog"
+    GOVERNMENT = "government"
+    ALL = [NEWSWIRE, PRESS_RELEASE, FINANCIAL_MEDIA, GENERAL_MEDIA, AGGREGATOR, BLOG, GOVERNMENT].freeze
   end
 
   # Names of WebSocket events.

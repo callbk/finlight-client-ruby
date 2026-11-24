@@ -50,12 +50,20 @@ RSpec.describe "request parameters" do
     expect { stream_client.raw_stream(tickers: ["X"]) }.to raise_error(Finlight::ValidationError)
     expect { stream_client.stream(payload_version: 2) }.to raise_error(Finlight::ValidationError)
     expect { stream_client.stream(on_error: 1) }.to raise_error(Finlight::ValidationError)
+    # Source type filters exist for search only.
+    %i[source_types exclude_source_types].each do |key|
+      expect { stream_client.stream(key => ["newswire"]) }.to raise_error(Finlight::ValidationError)
+      expect { stream_client.raw_stream(key => ["newswire"]) }.to raise_error(Finlight::ValidationError)
+    end
   end
 
   it "sends unknown vocabulary values unchanged" do
     mock_http.respond({ status: 200, body: { "articles" => [], "pagination" => {} } })
-    client.articles.search(event_types: ["brand_new_type"], order: "sideways")
-    expect(JSON.parse(mock_http.requests[0].body)).to eq("eventTypes" => ["brand_new_type"], "order" => "sideways")
+    client.articles.search(event_types: ["brand_new_type"], order: "sideways", source_types: ["wire_service"],
+                           exclude_source_types: [Finlight::SourceType::BLOG])
+    expected = { "eventTypes" => ["brand_new_type"], "order" => "sideways", "sourceTypes" => ["wire_service"],
+                 "excludeSourceTypes" => ["blog"] }
+    expect(JSON.parse(mock_http.requests[0].body)).to eq(expected)
   end
 
   it "sends false and 0 when set, and nothing for nil" do

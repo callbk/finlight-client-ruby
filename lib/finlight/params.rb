@@ -94,15 +94,16 @@ module Finlight
 
     SEARCH_KEYS = {
       query: "query", sources: "sources", opt_in_sources: "optInSources", exclude_sources: "excludeSources",
-      from: "from", to: "to", languages: "languages", tickers: "tickers", countries: "countries",
-      categories: "categories", has_content: "hasContent", roles: "roles", min_relevance: "minRelevance",
+      source_types: "sourceTypes", exclude_source_types: "excludeSourceTypes", from: "from", to: "to",
+      languages: "languages", tickers: "tickers", countries: "countries", categories: "categories",
+      has_content: "hasContent", roles: "roles", min_relevance: "minRelevance",
       event_types: "eventTypes", event_directions: "eventDirections", min_importance: "minImportance",
       sectors: "sectors", company_countries: "companyCountries", exchanges: "exchanges", order_by: "orderBy",
       order: "order", limit: "limit", cursor: "cursor", include: "include"
     }.freeze
 
-    LIST_KEYS = %i[sources opt_in_sources exclude_sources tickers countries categories roles event_types
-                   event_directions sectors company_countries exchanges].freeze
+    LIST_KEYS = %i[sources opt_in_sources exclude_sources source_types exclude_source_types tickers countries
+                   categories roles event_types event_directions sectors company_countries exchanges].freeze
     STRING_KEYS = %i[query min_importance order_by order cursor].freeze
 
     # Body of POST /v3/articles/search from the keywords the caller set.

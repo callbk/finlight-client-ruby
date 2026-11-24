@@ -17,7 +17,8 @@ RSpec.describe "Conformance V: vocabulary" do
       .and eq(resp["eventDirections"]["values"])
     expect(Finlight::Importance::ALL).to eq(req["minImportance"]["values"]).and eq(resp["importance"]["values"])
     expect(Finlight::SentimentLabel::ALL).to eq(resp["sentimentLabels"]["values"])
-    expect(Finlight::SourceType::ALL).to eq(resp["sourceTypes"]["values"])
+    expect(Finlight::SourceType::ALL).to eq(req["sourceTypes"]["values"])
+      .and eq(req["excludeSourceTypes"]["values"]).and eq(resp["sourceTypes"]["values"])
 
     expect(Finlight::StreamEventName::ALL).to eq(ws["events"]["values"])
     expect(Finlight::StreamEventName::ARTICLE_EVENTS).to eq(ws["articleEvents"]["values"])

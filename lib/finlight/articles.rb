@@ -18,15 +18,16 @@ module Finlight
     # keywords sends `{}`. Unknown keywords and wrong shapes raise ValidationError before any request.
     #
     # @return [ArticlePage]
-    def search(query: nil, sources: nil, opt_in_sources: nil, exclude_sources: nil, from: nil, to: nil,
-               languages: nil, tickers: nil, countries: nil, categories: nil, has_content: nil, roles: nil,
-               min_relevance: nil, event_types: nil, event_directions: nil, min_importance: nil, sectors: nil,
-               company_countries: nil, exchanges: nil, order_by: nil, order: nil, limit: nil, cursor: nil,
-               include: nil, **unknown)
+    def search(query: nil, sources: nil, opt_in_sources: nil, exclude_sources: nil, source_types: nil,
+               exclude_source_types: nil, from: nil, to: nil, languages: nil, tickers: nil, countries: nil,
+               categories: nil, has_content: nil, roles: nil, min_relevance: nil, event_types: nil,
+               event_directions: nil, min_importance: nil, sectors: nil, company_countries: nil, exchanges: nil,
+               order_by: nil, order: nil, limit: nil, cursor: nil, include: nil, **unknown)
       Params.reject_unknown!(unknown, "articles.search")
       body = Params.search_body(
         query: query, sources: sources, opt_in_sources: opt_in_sources, exclude_sources: exclude_sources,
-        from: from, to: to, languages: languages, tickers: tickers, countries: countries, categories: categories,
+        source_types: source_types, exclude_source_types: exclude_source_types, from: from, to: to,
+        languages: languages, tickers: tickers, countries: countries, categories: categories,
         has_content: has_content, roles: roles, min_relevance: min_relevance, event_types: event_types,
         event_directions: event_directions, min_importance: min_importance, sectors: sectors,
         company_countries: company_countries, exchanges: exchanges, order_by: order_by, order: order,
@@ -40,11 +41,12 @@ module Finlight
     # The result can be iterated once.
     #
     # @return [SearchAllResult]
-    def search_all(query: nil, sources: nil, opt_in_sources: nil, exclude_sources: nil, from: nil, to: nil,
-                   languages: nil, tickers: nil, countries: nil, categories: nil, has_content: nil, roles: nil,
-                   min_relevance: nil, event_types: nil, event_directions: nil, min_importance: nil,
-                   sectors: nil, company_countries: nil, exchanges: nil, order_by: nil, order: nil, limit: nil,
-                   cursor: nil, include: nil, max_pages: nil, **unknown)
+    def search_all(query: nil, sources: nil, opt_in_sources: nil, exclude_sources: nil, source_types: nil,
+                   exclude_source_types: nil, from: nil, to: nil, languages: nil, tickers: nil, countries: nil,
+                   categories: nil, has_content: nil, roles: nil, min_relevance: nil, event_types: nil,
+                   event_directions: nil, min_importance: nil, sectors: nil, company_countries: nil,
+                   exchanges: nil, order_by: nil, order: nil, limit: nil, cursor: nil, include: nil,
+                   max_pages: nil, **unknown)
       Params.reject_unknown!(unknown, "articles.search_all")
       max_pages = @config.max_pages if max_pages.nil?
       unless max_pages.is_a?(Integer) && max_pages >= 1
@@ -53,7 +55,8 @@ module Finlight
 
       body = Params.search_body(
         query: query, sources: sources, opt_in_sources: opt_in_sources, exclude_sources: exclude_sources,
-        from: from, to: to, languages: languages, tickers: tickers, countries: countries, categories: categories,
+        source_types: source_types, exclude_source_types: exclude_source_types, from: from, to: to,
+        languages: languages, tickers: tickers, countries: countries, categories: categories,
         has_content: has_content, roles: roles, min_relevance: min_relevance, event_types: event_types,
         event_directions: event_directions, min_importance: min_importance, sectors: sectors,
         company_countries: company_countries, exchanges: exchanges, order_by: order_by, order: order,
