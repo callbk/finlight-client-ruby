@@ -79,6 +79,18 @@ class WsServer
       @closed
     end
 
+    # Holds back everything the client sends from now on (and so the answer to its close frame)
+    # until #release.
+    def hold!
+      @held = Thread::Queue.new
+    end
+
+    def release
+      held = @held
+      @held = nil
+      held&.close
+    end
+
     def wait_closed(timeout = 5)
       return true if @closed
 
@@ -89,6 +101,7 @@ class WsServer
       return if @closed
 
       @closed = true
+      release
       begin
         @io.close
       rescue StandardError
@@ -104,6 +117,7 @@ class WsServer
       @mutex.synchronize { @driver.parse(head) }
       loop do
         chunk = @io.readpartial(65_536)
+        @held&.pop
         @mutex.synchronize { @driver.parse(chunk) }
       end
     rescue StandardError
@@ -144,7 +158,8 @@ class WsServer
     "ws://127.0.0.1:#{port}"
   end
 
-  # Queues the answer for the next dial: nil accepts, [status, body] refuses.
+  # Queues the answer for the next dial: nil accepts, [status, body] refuses, :drop closes the
+  # socket without an answer (a network failure).
   def plan(answer)
     @mutex.synchronize { @reject_plan << answer }
   end
@@ -197,6 +212,10 @@ class WsServer
     plan = @mutex.synchronize do
       @dials << dial
       @reject_plan.shift
+    end
+    if plan == :drop
+      io.close
+      return
     end
     if plan
       status, body = plan

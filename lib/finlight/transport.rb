@@ -140,6 +140,21 @@ module Finlight
         close_io
       end
 
+      # Sends the close frame and waits until the server answers it (another thread reads the
+      # answer in #receive), the timeout passes or the block returns true; then closes the socket.
+      def close_and_wait(code, timeout)
+        sent = @mutex.synchronize do
+          @open && !@closed && !@write_failed && @driver.close("", code) && !@write_failed
+        rescue StandardError
+          false
+        end
+        if sent
+          deadline = monotonic + timeout
+          Kernel.sleep(0.01) until @closed || monotonic >= deadline || (block_given? && yield)
+        end
+        close(code)
+      end
+
       private
 
       def monotonic

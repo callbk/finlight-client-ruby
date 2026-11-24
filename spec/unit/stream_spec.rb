@@ -200,6 +200,94 @@ RSpec.describe "streams" do
     thread.join(3)
   end
 
+  # The supervisor's wait before the next dial, once the old connection's threads are gone.
+  def redial_wait
+    wait_until("the redial wait") { finlight_threads.map(&:name) == ["finlight-stream"] && clock.next_deadline }
+    clock.next_deadline - clock.now
+  end
+
+  it "starts the reconnect backoff over on a pong or an article, never on connection.admitted" do
+    stream = client.stream(query: "x")
+    _items, thread = consume(stream)
+    pong = { "event" => "connection.pong", "payloadVersion" => 3, "data" => { "t" => 1, "serverNow" => 1 } }
+    article_frame = { "event" => "article.created", "payloadVersion" => 3, "data" => article }
+    # Each round: admitted, the given frames, then the server closes. Admitted alone (as before a
+    # SEARCH_FAILED) must not start the backoff over, or such a loop would never slow down.
+    waits = [[], [], [], [pong], [], [], [article_frame]].map do |frames|
+      conn = server.next_connection
+      conn.recv
+      conn.send_frame(admitted_frame)
+      frames.each { |frame| conn.send_frame(frame) }
+      conn.close(1001)
+      wait = redial_wait
+      clock.advance(wait)
+      wait
+    end
+    expect(waits[0]).to be <= 1.0
+    expect(waits[1]).to be >= 1.0
+    expect(waits[2]).to be >= 2.0 # 1 s doubled twice (with jitter 0.5..1): admitted did not reset it
+    expect(waits[3]).to be <= 1.0 # a pong did
+    expect(waits[5]).to be >= 2.0
+    expect(waits[6]).to be <= 1.0 # an article did
+    server.next_connection.recv
+  ensure
+    stream&.close
+    thread&.join(3)
+  end
+
+  it "dials again at once, without on_error, when the rotation dial fails (make-before-break)" do
+    errors = []
+    reconnects = []
+    stream = client(rotation_interval: 20.0).stream(query: "x", on_error: ->(e) { errors << e },
+                                                    on_reconnect: ->(i) { reconnects << i })
+    _items, thread = consume(stream)
+    old = server.next_connection
+    old.recv
+    old.send_frame(admitted_frame)
+    server.plan(:drop) # the rotation dial fails on the network
+    clock.advance(20.0)
+    fresh = server.next_connection # the clock does not move: no backoff
+    fresh.recv
+    expect(old.wait_closed(3)).to be(true)
+    expect(server.dial_count).to eq(3)
+    wait_until("the reconnect hook") { reconnects.any? }
+    expect(reconnects.map(&:reason)).to eq(["rotation"])
+    expect(errors).to eq([])
+  ensure
+    stream&.close
+    thread&.join(3)
+  end
+
+  it "closes the old connection, waits for its close reply and dials again when the rotation dial is refused" do
+    errors = []
+    stream = client(rotation_interval: 20.0).stream(query: "x", on_error: ->(e) { errors << e })
+    _items, thread = consume(stream)
+    old = server.next_connection
+    old.recv
+    old.send_frame(admitted_frame)
+    old.hold! # the server answers the close frame only on release
+    too_many = '{"message":"Too many concurrent connections for this API key."}'
+    server.plan([403, too_many]) # a plan with a connection limit of 1: the old connection still counts
+    server.plan([403, too_many]) # and the dial after closing it is refused too
+    clock.advance(20.0)
+    wait_until("the rotation dial") { server.dial_count >= 2 }
+    sleep 0.2
+    expect(server.dial_count).to eq(2) # still waiting for the old connection's close reply
+    old.release
+    expect(old.wait_closed(3)).to be(true)
+    wait_until("the dial after the close") { server.dial_count == 3 }
+    # Only this second refusal is reported, and only it waits the long backoff.
+    wait_until("the report") { errors.any? }
+    expect(errors.map(&:class)).to eq([Finlight::ForbiddenError])
+    expect(redial_wait).to be >= 60.0
+    clock.advance(clock.next_deadline - clock.now)
+    server.next_connection.recv
+    expect(errors.size).to eq(1)
+  ensure
+    stream&.close
+    thread&.join(3)
+  end
+
   it "delivers the raw frame of unknown events as kind other" do
     stream = client.stream(query: "x")
     items, thread = consume(stream)

@@ -36,7 +36,10 @@ Contract kit: 3.0.0-rc.3.
   `connection.preempted` with reason `quota_exceeded`) the stream tries again every hour until the quota
   allows it, logging a warning and calling `on_quota_wait` each time. On by default; `quota_reconnect: false`
   ends the stream with the error instead; `quota_reconnect_interval` sets the interval. A preempt with
-  reason `connection_limit` stays terminal.
+  reason `connection_limit` stays terminal. A refused or failed rotation dial (a plan at its connection
+  limit) closes the old connection, waits for its close reply (at most 5 s) and dials again at once,
+  without `on_error`; only a refusal of that dial waits as usual. The reconnect backoff starts over only
+  after a pong or an article, not on `connection.admitted`.
 - The WebSocket dial sends `x-api-key` in lowercase and reads the body of a refused upgrade.
 - `Finlight::Webhooks.construct_event`, `construct_event_from_values` and `verify_signature`. A correctly
   signed body that is not `payloadVersion` 3 returns `Finlight::WrongPayloadVersion` (answer it with 2xx).

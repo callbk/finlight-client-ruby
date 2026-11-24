@@ -172,7 +172,10 @@ Limits to know:
 - Your plan's connection limit is shared by enriched, raw and older SDK connections. When the limit is
   reached, a new connection is refused and the SDK retries after 60 s. Pass `takeover: true` to
   `stream` to replace the oldest connection instead.
-- Connections live at most 2 hours; the SDK rotates them after 115 minutes.
+- Connections live at most 2 hours; the SDK rotates them after 115 minutes. When your plan is at its
+  connection limit (for example a limit of 1), the old connection still counts and the new dial is
+  refused; the SDK then closes the old connection and dials again at once, so the gap is about one dial
+  long. Only if that dial is refused too does the usual wait of at least 60 s apply.
 - Right after subscribing, the server sends the newest matching article once, also after every
   reconnect and rotation. It can be old. The duplicate filter drops it when you already had it.
 - Live frames over 32,000 bytes are dropped by the server without notice. This can happen with

@@ -35,6 +35,10 @@ module Finlight
 
     HOOKS = %i[on_admitted on_reconnect on_error on_quota_wait].freeze
 
+    # How long a rotation that could not dial waits for the old connection's close reply.
+    CLOSE_REPLY_WAIT = 5.0
+    private_constant :CLOSE_REPLY_WAIT
+
     # @api private
     def initialize(config, frame, raw:, takeover:, hooks:, on_close: nil)
       @config = config
@@ -149,6 +153,7 @@ module Finlight
       case frame.type
       when :pong
         session.last_pong = @clock.monotonic
+        session.working = true
         @search_failed = 0 unless frame.v2 # a v3 pong means the subscribe was stored
       when :admitted
         session.admitted = true
@@ -157,7 +162,9 @@ module Finlight
         @logger.debug("finlight") { "connection admitted" }
         queue_hook(:on_admitted, AdmittedInfo.new(lease_id: f[:lease_id], server_now: f[:server_now],
                                                   client_nonce: f[:client_nonce]))
-      when :article then deliver_article(frame)
+      when :article
+        session.working = true
+        deliver_article(frame)
       when :preempted then handle_preempted(session, frame)
       when :error then handle_error_frame(session, frame)
       when :legacy_article then @logger.warn("finlight") { "dropped a v2 article frame on a v3 stream" }
@@ -271,6 +278,13 @@ module Finlight
       session.close(1000)
     end
 
+    # Closes the old connection of a rotation whose dial failed and waits (at most
+    # CLOSE_REPLY_WAIT) for the server's close reply, so the server has let the slot go.
+    def retire_and_wait(session)
+      remove(session)
+      session.close_and_wait(CLOSE_REPLY_WAIT) { @closed }
+    end
+
     def run
       attempt = 0
       delay = 0.0
@@ -286,8 +300,10 @@ module Finlight
           verdict, error, refused_reason = classify_dial(e.status, e.body)
           verdict = :terminal if verdict == :quota && !@config.quota_reconnect
           if current
-            # A rotation dial failed: free the slot first, then dial again.
-            retire(current)
+            # A refused rotation dial (often the connection limit, which the old connection still
+            # counts against): free the slot first, then dial again at once without on_error.
+            # Only a refusal of that dial waits and reports.
+            retire_and_wait(current)
             current = nil
             next unless verdict == :terminal
           end
@@ -305,8 +321,11 @@ module Finlight
           next
         rescue StandardError => e
           if current
-            retire(current)
+            # A failed rotation dial: close the old connection and dial again at once.
+            @logger.warn("finlight") { "the rotation dial failed (#{e.class.name}); dialing again now" }
+            retire_and_wait(current)
             current = nil
+            next
           end
           error = wrap_dial_error(e)
           emit_error(error)
@@ -355,9 +374,11 @@ module Finlight
           next
         end
         reason = outcome.reason
-        healthy = session.admitted && [ReconnectReason::WATCHDOG, ReconnectReason::CLOSED,
-                                       ReconnectReason::ROTATION].include?(outcome.reason)
-        attempt = 0 if healthy
+        # Only a pong or an article proves the connection worked. connection.admitted comes before
+        # the subscribe is checked, so admitted followed by SEARCH_FAILED or a close still backs off.
+        attempt = 0 if session.working
+        healthy = session.working && [ReconnectReason::WATCHDOG, ReconnectReason::CLOSED,
+                                      ReconnectReason::ROTATION].include?(outcome.reason)
         if outcome.kind == :rotate
           @logger.info("finlight") { "rotating the WebSocket connection" }
           next # keep the old session open until the new one has subscribed
@@ -546,7 +567,7 @@ module Finlight
     # One WebSocket connection of a stream: the subscribe, a reader thread and a ticker thread
     # (ping, watchdog, rotation). Internal.
     class Session
-      attr_accessor :admitted, :retiring, :last_pong
+      attr_accessor :admitted, :working, :retiring, :last_pong
       attr_reader :nonce, :outcome
 
       def self.closed_outcome(error)
@@ -569,6 +590,7 @@ module Finlight
         @last_pong = @opened_at
         @last_ping = @opened_at
         @admitted = false
+        @working = false
         @retiring = false
         @stopping = false
         @outcome = nil
@@ -607,6 +629,26 @@ module Finlight
         finish(Outcome.new(:stopped, nil, nil, nil))
         begin
           @conn.close(code)
+        rescue StandardError
+          nil
+        end
+        Stream.stop_thread(@ticker)
+        Stream.stop_thread(@reader)
+      end
+
+      # Like #close, but waits up to `timeout` seconds for the server's close reply (or until the
+      # block says the stream stopped). The reader thread reads that reply. Custom transports
+      # without close_and_wait are closed at once.
+      def close_and_wait(timeout, &)
+        unless @conn.respond_to?(:close_and_wait) && @reader&.alive?
+          close(1000)
+          return
+        end
+        @stopping = true
+        @retiring = true
+        finish(Outcome.new(:stopped, nil, nil, nil))
+        begin
+          @conn.close_and_wait(1000, timeout, &)
         rescue StandardError
           nil
         end
