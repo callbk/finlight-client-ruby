@@ -102,6 +102,7 @@ sources = client.sources.list
 
 - 見つからない場合は `Finlight::NotFoundError` です。空の結果にはなりません。記事 ID 導入前に収録された記事は ID では 404 になるため、リンクで参照してください。
 - `companies.*` には `entityAccess` 権限が必要です（ない場合は `Finlight::ForbiddenError`）。
+- 企業・ソースの参照も記事リクエストと同じくクレジットを消費します。成功したリクエスト 1 回につき 1 クレジット（`get_many` は ID ごとではなく 1 リクエストで 1）。304 の再検証とエラーは無料です。ここでも 429 が返ることがあります。
 - `companies.get` は最大 256 件（`company_cache_size`）を保持し、ETag で再検証します。304 ではキャッシュのレコードを返します。
   自分の ETag を使う `companies.get(id, if_none_match: etag)` は 304 で `nil`（「変更なし」）を返します。
 - `CompanyList` と `SourceList` は Enumerable です。読めないエントリは除外され、警告としてログに出て、`skipped`

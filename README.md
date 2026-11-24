@@ -102,6 +102,8 @@ sources = client.sources.list
 - A miss raises `Finlight::NotFoundError`; it is never an empty result. Articles indexed before article
   ids existed answer 404 by id; look them up by link.
 - `companies.*` needs the `entityAccess` entitlement (`Finlight::ForbiddenError` otherwise).
+- Lookups cost credits like article requests: 1 credit per successful request (`get_many` 1 per request,
+  not per id). A 304 revalidation and errors are free. A 429 is possible here too.
 - `companies.get` keeps up to 256 records (`company_cache_size`) and revalidates them with their ETag.
   A 304 returns the cached record. With your own ETag, `companies.get(id, if_none_match: etag)` returns
   `nil` on 304 ("not modified").

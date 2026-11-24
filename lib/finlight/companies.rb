@@ -2,6 +2,8 @@
 
 module Finlight
   # `client.companies`: company lookups (needs the entityAccess entitlement, ForbiddenError otherwise).
+  # Each successful (2xx) request costs 1 credit from the monthly quota, like an article request.
+  # A 304 revalidation and error answers are free.
   class Companies
     def initialize(http, config)
       @http = http
@@ -14,7 +16,7 @@ module Finlight
       "#<Finlight::Companies>"
     end
 
-    # GET /v3/companies?q=…&mic=… (at most 10 results, no pages).
+    # GET /v3/companies?q=…&mic=… (at most 10 results, no pages). Costs 1 credit.
     #
     # @return [CompanyList]
     def search(q, mic: nil)
@@ -25,6 +27,7 @@ module Finlight
     end
 
     # GET /v3/companies?ids=1,2 (1 to 10 ids; unknown ids are left out; order is not guaranteed).
+    # Costs 1 credit per request, not per id.
     #
     # @return [CompanyList]
     def get_many(ids)
@@ -36,6 +39,7 @@ module Finlight
     #
     # With `if_none_match` (your own ETag) a 304 returns nil ("not modified"). Without it the SDK
     # revalidates its own cached copy and returns that copy on 304. A miss raises NotFoundError.
+    # A 200 costs 1 credit; a 304 revalidation is free.
     #
     # @return [CompanyRecord, nil]
     def get(company_id, if_none_match: nil)
@@ -111,6 +115,7 @@ module Finlight
     end
 
     # GET /v3/sources, sorted by domain. `has_content` is nil without full-article access.
+    # Costs 1 credit per successful request; errors are free.
     #
     # @return [SourceList]
     def list
