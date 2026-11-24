@@ -82,8 +82,8 @@ on where a walk stopped. Unknown keywords and wrong shapes (`limit: 0`, `languag
 
 `source_types` and `exclude_source_types` filter by the type of the source (`Finlight::SourceType::ALL`,
 for example `Finlight::SourceType::NEWSWIRE`). Articles from unclassified sources never match
-`source_types` and are kept by `exclude_source_types`. Both only narrow the sources you already get. They
-exist for search only, not for streams.
+`source_types` and are kept by `exclude_source_types`. Both only narrow the sources you already get.
+`client.stream` and `client.raw_stream` take them too.
 
 ## Look up articles, companies and sources
 
@@ -139,6 +139,7 @@ article.raw_json            # the JSON as received, unknown keys included
 stream = client.stream(
   query: "ticker:NVDA",
   language: "en",
+  exclude_source_types: [Finlight::SourceType::BLOG],
   include: ["companies", "events"],
   include_updates: true,
   on_admitted: ->(info) { puts "admitted #{info.lease_id}" },
@@ -155,8 +156,9 @@ end
 - `each` blocks. Leave it with `break`, or call `stream.close` from another thread: the socket closes
   with 1000 and every background thread ends. A stream can be iterated once.
 - `event.kind` is `created`, `updated` or `other`. `event.raw_json` is the whole frame.
-- `client.raw_stream(query:, sources:, exclude_sources:, language:, include_updates:)` delivers articles
-  before enrichment. It takes no `include`; there is no content, sentiment, companies or events.
+- `client.raw_stream(query:, sources:, exclude_sources:, source_types:, exclude_source_types:, language:, include_updates:)`
+  delivers articles before enrichment. It takes no `include`; there is no content, sentiment, companies or
+  events.
 - The stream pings every 25 s, reconnects when no pong came for 60 s, and opens a fresh connection after
   115 minutes. After each reconnect it sends the same subscribe and drops duplicates.
 - It never backfills. `on_reconnect` gets the latest `availableAt` you saw (raw: `firstSeenAt`). Fill gaps

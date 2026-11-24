@@ -50,10 +50,14 @@ RSpec.describe "request parameters" do
     expect { stream_client.raw_stream(tickers: ["X"]) }.to raise_error(Finlight::ValidationError)
     expect { stream_client.stream(payload_version: 2) }.to raise_error(Finlight::ValidationError)
     expect { stream_client.stream(on_error: 1) }.to raise_error(Finlight::ValidationError)
-    # Source type filters exist for search only.
+    # Source type filters take a list of strings on both streams, as in search.
     %i[source_types exclude_source_types].each do |key|
-      expect { stream_client.stream(key => ["newswire"]) }.to raise_error(Finlight::ValidationError)
-      expect { stream_client.raw_stream(key => ["newswire"]) }.to raise_error(Finlight::ValidationError)
+      expect { stream_client.stream(key => "newswire") }.to raise_error(Finlight::ValidationError) { |e|
+        expect(e.param).to eq(key.to_s)
+      }
+      expect { stream_client.raw_stream(key => [1]) }.to raise_error(Finlight::ValidationError) { |e|
+        expect(e.param).to eq(key.to_s)
+      }
     end
   end
 
@@ -77,6 +81,18 @@ RSpec.describe "request parameters" do
     expect(body).to eq(fx["request"]["body"])
     expect(body.slice("sourceTypes", "excludeSourceTypes"))
       .to eq("sourceTypes" => %w[newswire financial_media], "excludeSourceTypes" => ["press_release"])
+  end
+
+  it "puts the source type filters into both subscribe frames only when set, unknown values unchanged" do
+    [false, true].each do |raw|
+      frame = FinlightInternal::Params.subscribe_frame(
+        { query: "q", source_types: ["wire_service"], exclude_source_types: [Finlight::SourceType::BLOG] }, raw: raw
+      )
+      expect(frame.slice("sourceTypes", "excludeSourceTypes"))
+        .to eq("sourceTypes" => ["wire_service"], "excludeSourceTypes" => ["blog"])
+      frame = FinlightInternal::Params.subscribe_frame({ query: "q", source_types: nil }, raw: raw)
+      expect(frame.keys).to eq(%w[payloadVersion query])
+    end
   end
 
   it "checks the shape of the source type filters before any request" do

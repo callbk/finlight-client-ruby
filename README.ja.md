@@ -83,7 +83,8 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 
 `source_types` と `exclude_source_types` はソースの種類で絞り込みます（`Finlight::SourceType::ALL`、例：
 `Finlight::SourceType::NEWSWIRE`）。種類が未分類のソースの記事は `source_types` に一致せず、
-`exclude_source_types` では残ります。どちらも受け取れるソースを狭めるだけです。検索専用で、ストリームでは使えません。
+`exclude_source_types` では残ります。どちらも受け取れるソースを狭めるだけです。
+`client.stream` と `client.raw_stream` でも使えます。
 
 ## 記事・企業・ソースを参照する
 
@@ -133,6 +134,7 @@ article.raw_json            # the JSON as received, unknown keys included
 stream = client.stream(
   query: "ticker:NVDA",
   language: "en",
+  exclude_source_types: [Finlight::SourceType::BLOG],
   include: ["companies", "events"],
   include_updates: true,
   on_admitted: ->(info) { puts "admitted #{info.lease_id}" },
@@ -148,7 +150,7 @@ end
 
 - `each` はブロックします。`break` で抜けるか、別スレッドから `stream.close` を呼ぶと、ソケットは 1000 で閉じ、すべてのバックグラウンドスレッドが終了します。ストリームは 1 回だけ反復できます。
 - `event.kind` は `created`、`updated`、`other` のいずれかです。`event.raw_json` はフレーム全体です。
-- `client.raw_stream(query:, sources:, exclude_sources:, language:, include_updates:)` は加工前の記事を配信します。
+- `client.raw_stream(query:, sources:, exclude_sources:, source_types:, exclude_source_types:, language:, include_updates:)` は加工前の記事を配信します。
   `include` は受け付けず、本文、センチメント、企業、イベントはありません。
 - ストリームは 25 秒ごとに ping を送り、60 秒 pong がなければ再接続し、115 分後に新しい接続を開きます。再接続のたびに同じ購読を送り、重複を捨てます。
 - 自動で過去分を取り直すことはしません。`on_reconnect` は最後に見た `availableAt`（raw では `firstSeenAt`）を渡します。

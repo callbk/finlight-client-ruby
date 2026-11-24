@@ -93,8 +93,8 @@ module Finlight
     ALL = [POSITIVE, NEGATIVE, NEUTRAL].freeze
   end
 
-  # Values of `source.type`, `Source#type` and the search filters `source_types` and
-  # `exclude_source_types`. `source.type` is nil when the source is not classified.
+  # Values of `source.type`, `Source#type` and the filters `source_types` and `exclude_source_types`
+  # (search and both streams). `source.type` is nil when the source is not classified.
   module SourceType
     NEWSWIRE = "newswire"
     PRESS_RELEASE = "press_release"

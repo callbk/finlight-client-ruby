@@ -10,9 +10,9 @@ class SessionEngine
   include RSpec::Matchers
 
   FORBIDDEN = %w[includeContent includeEntities extended].freeze
-  ENRICHED_KEYS = %w[include query sources excludeSources optInSources language tickers countries categories
-                     excludeEmptyContent includeUpdates].freeze
-  RAW_KEYS = %w[query sources excludeSources language includeUpdates].freeze
+  ENRICHED_KEYS = %w[include query sources excludeSources optInSources sourceTypes excludeSourceTypes language
+                     tickers countries categories excludeEmptyContent includeUpdates].freeze
+  RAW_KEYS = %w[query sources excludeSources sourceTypes excludeSourceTypes language includeUpdates].freeze
   DEFAULT_FRAME = { "payloadVersion" => 3, "query" => "ticker:XMPL", "clientNonce" => "c-kit-1" }.freeze
   QUOTA_REFUSAL = [403, '{"message":"WebSocket quota exceeded for the current period"}'].freeze
 

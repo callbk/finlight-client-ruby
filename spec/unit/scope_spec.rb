@@ -18,12 +18,13 @@ RSpec.describe "v3-only scope" do
     bodies = [mock_http.requests[0].body]
     bodies << JSON.generate(FinlightInternal::Params.subscribe_frame(
                               { query: "q", sources: ["a"], exclude_sources: ["b"], opt_in_sources: ["c"],
-                                language: "en", tickers: ["X"], countries: ["US"], categories: ["markets"],
+                                source_types: ["newswire"], exclude_source_types: ["blog"], language: "en",
+                                tickers: ["X"], countries: ["US"], categories: ["markets"],
                                 exclude_empty_content: true, include_updates: true, include: ["content"] }, raw: false
                             ))
     bodies << JSON.generate(FinlightInternal::Params.subscribe_frame(
-                              { query: "q", sources: ["a"], exclude_sources: ["b"], language: "en",
-                                include_updates: false }, raw: true
+                              { query: "q", sources: ["a"], exclude_sources: ["b"], source_types: ["newswire"],
+                                exclude_source_types: ["blog"], language: "en", include_updates: false }, raw: true
                             ))
     bodies.each do |body|
       legacy.each { |key| expect(body).not_to include("\"#{key}\"") }

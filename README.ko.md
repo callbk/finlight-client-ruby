@@ -83,7 +83,8 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 
 `source_types`와 `exclude_source_types`는 소스 유형으로 거릅니다(`Finlight::SourceType::ALL`, 예:
 `Finlight::SourceType::NEWSWIRE`). 분류되지 않은 소스의 기사는 `source_types`에 일치하지 않고,
-`exclude_source_types`에서는 남습니다. 둘 다 이미 받을 수 있는 소스를 좁히기만 합니다. 검색 전용이며 스트림에는 없습니다.
+`exclude_source_types`에서는 남습니다. 둘 다 이미 받을 수 있는 소스를 좁히기만 합니다.
+`client.stream`과 `client.raw_stream`에서도 쓸 수 있습니다.
 
 ## 기사, 기업, 소스 조회
 
@@ -133,6 +134,7 @@ article.raw_json            # the JSON as received, unknown keys included
 stream = client.stream(
   query: "ticker:NVDA",
   language: "en",
+  exclude_source_types: [Finlight::SourceType::BLOG],
   include: ["companies", "events"],
   include_updates: true,
   on_admitted: ->(info) { puts "admitted #{info.lease_id}" },
@@ -148,7 +150,7 @@ end
 
 - `each`는 블로킹합니다. `break`로 빠져나오거나 다른 스레드에서 `stream.close`를 호출하면 소켓이 1000으로 닫히고 모든 백그라운드 스레드가 끝납니다. 스트림은 한 번만 순회할 수 있습니다.
 - `event.kind`는 `created`, `updated`, `other` 중 하나입니다. `event.raw_json`은 프레임 전체입니다.
-- `client.raw_stream(query:, sources:, exclude_sources:, language:, include_updates:)`는 가공 전의 기사를 전달합니다.
+- `client.raw_stream(query:, sources:, exclude_sources:, source_types:, exclude_source_types:, language:, include_updates:)`는 가공 전의 기사를 전달합니다.
   `include`를 받지 않으며 본문, 감성, 기업, 이벤트가 없습니다.
 - 스트림은 25초마다 ping을 보내고, 60초 동안 pong이 없으면 다시 연결하며, 115분 후 새 연결을 엽니다. 재연결할 때마다 같은 구독을 보내고 중복을 버립니다.
 - 누락분을 자동으로 채우지 않습니다. `on_reconnect`는 마지막으로 본 `availableAt`(raw는 `firstSeenAt`)을 전달합니다.

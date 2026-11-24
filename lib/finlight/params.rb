@@ -134,10 +134,12 @@ module Finlight
 
     STREAM_KEYS = {
       query: "query", sources: "sources", exclude_sources: "excludeSources", opt_in_sources: "optInSources",
-      language: "language", tickers: "tickers", countries: "countries", categories: "categories",
+      source_types: "sourceTypes", exclude_source_types: "excludeSourceTypes", language: "language",
+      tickers: "tickers", countries: "countries", categories: "categories",
       exclude_empty_content: "excludeEmptyContent", include_updates: "includeUpdates", include: "include"
     }.freeze
-    RAW_STREAM_KEYS = %i[query sources exclude_sources language include_updates].freeze
+    RAW_STREAM_KEYS = %i[query sources exclude_sources source_types exclude_source_types language
+                         include_updates].freeze
 
     # Subscribe frame, built from a fixed list of keys (never a copy of the caller's object).
     def subscribe_frame(args, raw:)
@@ -151,7 +153,8 @@ module Finlight
         name = key.to_s
         frame[wire] = case key
                       when :query, :language then string!(value, name)
-                      when :sources, :exclude_sources, :opt_in_sources, :tickers, :countries, :categories
+                      when :sources, :exclude_sources, :opt_in_sources, :source_types, :exclude_source_types,
+                           :tickers, :countries, :categories
                         strings!(value, name)
                       when :exclude_empty_content, :include_updates then bool!(value, name)
                       when :include then include!(value, name)

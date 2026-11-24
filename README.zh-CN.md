@@ -83,7 +83,8 @@ puts "continue with cursor #{results.next_cursor}" if results.truncated?
 
 `source_types` 和 `exclude_source_types` 按来源类型筛选（`Finlight::SourceType::ALL`，例如
 `Finlight::SourceType::NEWSWIRE`）。未分类来源的文章不会匹配 `source_types`，在 `exclude_source_types` 下会保留。
-两者只会缩小你已能获取的来源范围。仅用于搜索，不用于流。
+两者只会缩小你已能获取的来源范围。
+`client.stream` 和 `client.raw_stream` 也支持这两个参数。
 
 ## 查询文章、公司和来源
 
@@ -133,6 +134,7 @@ article.raw_json            # the JSON as received, unknown keys included
 stream = client.stream(
   query: "ticker:NVDA",
   language: "en",
+  exclude_source_types: [Finlight::SourceType::BLOG],
   include: ["companies", "events"],
   include_updates: true,
   on_admitted: ->(info) { puts "admitted #{info.lease_id}" },
@@ -148,7 +150,7 @@ end
 
 - `each` 会阻塞。用 `break` 退出，或在另一个线程中调用 `stream.close`：套接字以 1000 关闭，所有后台线程结束。流只能遍历一次。
 - `event.kind` 为 `created`、`updated` 或 `other`。`event.raw_json` 是完整的帧。
-- `client.raw_stream(query:, sources:, exclude_sources:, language:, include_updates:)` 推送未经加工的文章。
+- `client.raw_stream(query:, sources:, exclude_sources:, source_types:, exclude_source_types:, language:, include_updates:)` 推送未经加工的文章。
   它不接受 `include`，没有正文、情绪、公司或事件。
 - 流每 25 秒发送一次 ping，60 秒内没有 pong 时重新连接，115 分钟后建立新连接。每次重连后发送相同的订阅并丢弃重复项。
 - 不会自动补数据。`on_reconnect` 提供你看到的最新 `availableAt`（raw：`firstSeenAt`）。可用

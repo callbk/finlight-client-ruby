@@ -28,8 +28,10 @@ Contract kit: 3.0.0-rc.4.
   keep the raw JSON (`raw_json`, `to_wire`) and tell absent from null (`content_present?`,
   `sentiment_present?`, `companies_present?`, `events_present?`). Timestamps stay Strings, with strict
   `*_time` readers. Broken list entries are skipped, logged and kept in `skipped`.
-- `articles.search` and `articles.search_all` take `source_types` and `exclude_source_types`
-  (`sourceTypes`, `excludeSourceTypes`). Streams do not take them.
+- `articles.search`, `articles.search_all`, `client.stream` and `client.raw_stream` take `source_types` and
+  `exclude_source_types` (`sourceTypes`, `excludeSourceTypes`), lists of `Finlight::SourceType` values. They
+  are sent only when set. A server older than the release ignores them on the streams, so the filter has no
+  effect there. Webhooks take the same filters in the dashboard.
 - Open vocabularies as String constants (`Finlight::EventType`, `Finlight::CompanyRole`,
   `Finlight::SourceType`, ...). `Finlight::SourceType` has 7 values: `newswire`, `press_release`,
   `financial_media`, `general_media`, `aggregator`, `blog`, `government`. `source.type` and `Source#type` are

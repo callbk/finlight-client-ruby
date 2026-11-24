@@ -37,6 +37,12 @@ RSpec.describe "Conformance S: WebSocket sessions" do
         expect(engine.reconnects.last.reason).to eq("watchdog")
       when "S-10"
         expect(engine.reconnects.last.reason).to eq("quota_exceeded")
+      when "S-29"
+        # Unknown values are sent as given (like search); the server's answer carries the allowed values.
+        issue = engine.terminal.errors[0]
+        expect(issue.field).to eq("sourceTypes")
+        expect(issue.allowed_values).to eq(Finlight::SourceType::ALL)
+        expect(server.dial_count).to eq(1)
       end
     end
   end

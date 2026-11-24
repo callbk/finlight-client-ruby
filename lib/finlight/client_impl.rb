@@ -49,13 +49,15 @@ module Finlight
     #
     # @param takeover [Boolean] replace the stalest connection when your connection limit is reached
     # @return [Stream]
-    def stream(query: nil, sources: nil, exclude_sources: nil, opt_in_sources: nil, language: nil, tickers: nil,
-               countries: nil, categories: nil, exclude_empty_content: nil, include_updates: nil, include: nil,
-               takeover: false, on_admitted: nil, on_reconnect: nil, on_error: nil, on_quota_wait: nil, **unknown)
+    def stream(query: nil, sources: nil, exclude_sources: nil, opt_in_sources: nil, source_types: nil,
+               exclude_source_types: nil, language: nil, tickers: nil, countries: nil, categories: nil,
+               exclude_empty_content: nil, include_updates: nil, include: nil, takeover: false, on_admitted: nil,
+               on_reconnect: nil, on_error: nil, on_quota_wait: nil, **unknown)
       Params.reject_unknown!(unknown, "stream")
       frame = Params.subscribe_frame(
         { query: query, sources: sources, exclude_sources: exclude_sources, opt_in_sources: opt_in_sources,
-          language: language, tickers: tickers, countries: countries, categories: categories,
+          source_types: source_types, exclude_source_types: exclude_source_types, language: language,
+          tickers: tickers, countries: countries, categories: categories,
           exclude_empty_content: exclude_empty_content, include_updates: include_updates, include: include },
         raw: false
       )
@@ -67,17 +69,17 @@ module Finlight
     # companies or events. It takes no `include`.
     #
     # @return [Stream]
-    def raw_stream(query: nil, sources: nil, exclude_sources: nil, language: nil, include_updates: nil,
-                   takeover: false, on_admitted: nil, on_reconnect: nil, on_error: nil, on_quota_wait: nil,
-                   **unknown)
+    def raw_stream(query: nil, sources: nil, exclude_sources: nil, source_types: nil, exclude_source_types: nil,
+                   language: nil, include_updates: nil, takeover: false, on_admitted: nil, on_reconnect: nil,
+                   on_error: nil, on_quota_wait: nil, **unknown)
       if unknown.key?(:include)
         raise ValidationError.new("raw streams take no include: the server would close the connection",
                                   param: "include")
       end
       Params.reject_unknown!(unknown, "raw_stream")
       frame = Params.subscribe_frame(
-        { query: query, sources: sources, exclude_sources: exclude_sources, language: language,
-          include_updates: include_updates },
+        { query: query, sources: sources, exclude_sources: exclude_sources, source_types: source_types,
+          exclude_source_types: exclude_source_types, language: language, include_updates: include_updates },
         raw: true
       )
       open_stream(frame, true, takeover, on_admitted: on_admitted, on_reconnect: on_reconnect, on_error: on_error,

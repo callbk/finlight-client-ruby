@@ -129,3 +129,4 @@ How the cases run:
 | S-26 | Dial refused: server error | `spec/conformance/ws_sessions_spec.rb` |
 | S-27 | connection.preempted, reason quota_exceeded, with quotaReconnect turned off | `spec/conformance/ws_sessions_spec.rb` |
 | S-28 | Dial refused: WebSocket quota exhausted, with quotaReconnect turned off | `spec/conformance/ws_sessions_spec.rb` |
+| S-29 | VALIDATION_FAILED for an unknown sourceTypes value | `spec/conformance/ws_sessions_spec.rb` |
