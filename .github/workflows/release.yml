@@ -1,8 +1,7 @@
 name: Release
 
-# Publishes the tagged version to RubyGems via OIDC trusted publishing —
-# no API key or secret involved. One-time setup on rubygems.org
-# (Dashboard -> Trusted publishers -> pending publisher for a new gem):
+# Publishes the tagged version to RubyGems via OIDC trusted publishing: no API key or secret.
+# One-time setup on rubygems.org (Dashboard -> Trusted publishers):
 #   gem name:          finlight-client
 #   repository owner:  callbk
 #   repository name:   finlight-client-ruby
@@ -17,7 +16,11 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     environment: ruby
     permissions:
@@ -31,15 +34,15 @@ jobs:
         with:
           ruby-version: "3.4"
           bundler-cache: true
-      - name: Check tag matches gem version
+      - name: Check tag matches the gem version
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          GEM_VERSION="$(ruby -r ./lib/finlight/client/version -e 'puts Finlight::Client::VERSION')"
+          GEM_VERSION="$(ruby -r ./lib/finlight/version -e 'puts Finlight::VERSION')"
           if [ "$VERSION" != "$GEM_VERSION" ]; then
-            echo "tag v${VERSION} does not match Finlight::Client::VERSION ${GEM_VERSION}" >&2
+            echo "tag v${VERSION} does not match Finlight::VERSION ${GEM_VERSION}" >&2
             exit 1
           fi
-      - name: Test
-        run: bundle exec rake
+      - name: Package contents (built from a clean checkout into an empty folder)
+        run: ruby scripts/check_package.rb
       - name: Publish to RubyGems (trusted publishing)
         uses: rubygems/release-gem@v1

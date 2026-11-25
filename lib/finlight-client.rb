@@ -1,3 +1,4 @@
 # frozen_string_literal: true
 
-require_relative "finlight/client"
+# Entry shim matching the gem name, so Bundler.require and `require "finlight-client"` work.
+require_relative "finlight"

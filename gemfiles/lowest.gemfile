@@ -1,0 +1,18 @@
+# frozen_string_literal: true
+
+# The lowest declared runtime dependencies (R-TEST-1). CI runs the suite with this file on the oldest Ruby:
+#   BUNDLE_GEMFILE=gemfiles/lowest.gemfile bundle install && BUNDLE_GEMFILE=gemfiles/lowest.gemfile bundle exec rspec
+
+source "https://rubygems.org"
+
+gemspec path: ".."
+
+gem "logger", "1.5.0"
+gem "websocket-driver", "0.7.7"
+
+group :development do
+  gem "rack", "~> 3.1"
+  gem "rake", "~> 13.0"
+  gem "rspec", "~> 3.13"
+  gem "webrick", "~> 1.9"
+end

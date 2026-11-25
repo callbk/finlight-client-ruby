@@ -2,20 +2,76 @@ name: Test
 
 on:
   push:
-    branches: [main]
+    branches: [main, v3]
   pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        ruby: ["3.2", "3.3", "3.4"]
+        ruby: ["3.2", "3.3", "3.4", "4.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Run tests
-        run: bundle exec rake
+      # conformance/ against its MANIFEST, every kit case (RSpec), RuboCop, README skeleton,
+      # the five examples. No network beyond 127.0.0.1, no keys.
+      - run: bundle exec rake
+
+  lowest-dependencies:
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: gemfiles/lowest.gemfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+      - run: bundle exec ruby -e 'require "websocket/driver"; require "logger"; puts Gem.loaded_specs.values_at("websocket-driver", "logger").map(&:full_name)'
+      - run: bundle exec rspec
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      # The gem must not contain conformance/, local/, spec/, examples/ or scripts/.
+      - run: ruby scripts/check_package.rb
+      - name: No AI attribution in commit messages
+        run: |
+          if git log --format=%B | grep -i -E "co-authored-by:.*(claude|anthropic|copilot|openai)|generated (with|by) (claude|ai)"; then
+            echo "commit messages must not carry AI attribution"; exit 1
+          fi
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # The gitleaks GitHub Action needs a paid license for organization repositories; the CLI
+      # does not. .gitleaks.toml allowlists the synthetic keys of the contract kit and the tests.
+      - name: Secret scan
+        env:
+          GITLEAKS_VERSION: 8.21.2
+          GITLEAKS_SHA256: 5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --verbose .

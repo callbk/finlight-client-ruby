@@ -3,5 +3,11 @@
 /pkg/
 /coverage/
 /local/
+/.yardoc/
+/doc/
 Gemfile.lock
+gemfiles/*.lock
 *.gem
+.env
+.env.*
+/gemfiles/vendor/
